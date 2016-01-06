@@ -4,11 +4,11 @@ MAINTAINER Nick Breen <nick@foobar.net.nz>
 
 ENV MYSQL_ROOT_PASSWORD="" \
     WP_LOCALE="en_NZ" \
-    WP_DB_HOST="mysql" \
-    WP_DB_PORT="3306" \
-    WP_DB_NAME="wordpress" \
-    WP_DB_USER="wordpress" \
-    WP_DB_PASSWORD="wordpress" \
+    WP_DB_HOST="" \
+    WP_DB_PORT="" \
+    WP_DB_NAME="" \
+    WP_DB_USER="" \
+    WP_DB_PASSWORD="" \
     WP_DB_PREFIX="wp_" \
     WP_URL="http://localhost" \
     WP_TITLE="Local Blog" \
@@ -36,3 +36,5 @@ RUN mkdir -p /var/www/html/wp-content/uploads && \
 
 VOLUME /var/www/html /var/www/html/wp-content/uploads
 WORKDIR /var/www/html
+
+USER wp

@@ -8,6 +8,12 @@ db:
 
 wp:
   build: .
+  entrypoint: bash
+  command: |-
+    -c -x -e '
+    . /setup.sh
+    setup
+    '
   links:
     - db:mysql
   environment:
@@ -15,5 +21,5 @@ wp:
     WP_ADMIN_USER: admin
     WP_ADMIN_PASSWORD: admin
     WP_ADMIN_EMAIL: admin@cli.dev
-    GH_PLUGINS: |
+    GH_PLUGINS: |-
       WP-API/WP-API

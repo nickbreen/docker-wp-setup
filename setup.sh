@@ -26,10 +26,7 @@ echo WP_DB_PORT = ${WP_DB_PORT:=$MYSQL_PORT_3306_TCP_PORT}
 function install_a {
 	while read SLUG
 	do
-		if [ "$SLUG" ]
-		then
-			wp $1 is-installed $SLUG || wp $1 install $SLUG --activate
-		fi
+		wp $1 is-installed $SLUG || wp $1 install $SLUG --activate
 	done
 }
 
@@ -43,15 +40,9 @@ function install_a {
 # Requires $BB_KEY and $BB_SECRET environment variables.
 #
 function install_b {
-	while read REPO TAG
-	do
-		if [ "$REPO" ]
-		then
-			local URL="https://bitbucket.org/${REPO}/get/${TAG:-master}.tar.gz"
-			TGZ=$(php /oauth.php -O -k "$BB_KEY" -s "$BB_SECRET" -- $URL)
-			install_tgz $1 $TGZ
-		fi
-	done
+	local URL="https://bitbucket.org/${2}/get/${3:-master}.tar.gz"
+	TGZ=$(php /oauth.php -O -k "$BB_KEY" -s "$BB_SECRET" -- $URL)
+	install_tgz $1 $TGZ
 }
 
 # Installs themes or plugins specified on STDIN hosted at GitHub.
@@ -64,20 +55,12 @@ function install_b {
 # Will authenticate with GitHub if a GH_TOKEN environment variable exists.
 #
 function install_g {
-	while read REPO TAG
-	do
-		if [ "$REPO" ]
-		then
-			set +e
-			# Get the tarball URL for the latest (or specified release)
-			local URL=$(curl -sfL ${GH_TOKEN:+-u $GH_TOKEN} "https://api.github.com/repos/${REPO}/releases/${TAG:-latest}" | jq -r '.tarball_url')
-			# If no releases are available fail-back to a commitish
-			: ${URL:=https://api.github.com/repos/${REPO}/tarball/${TAG:-master}}
-			TGZ=$(curl -sfLJO ${GH_TOKEN:+-u $GH_TOKEN} -w '%{filename_effective}' $URL)
-			set -e
-			install_tgz $1 $TGZ
-		fi
-	done
+	# Get the tarball URL for the latest (or specified release)
+	local URL=$(curl -sfL ${GH_TOKEN:+-u $GH_TOKEN} "https://api.github.com/repos/${2}/releases/${3:-latest}" | jq -r '.tarball_url')
+	# If no releases are available fail-back to a commitish
+	: ${URL:=https://api.github.com/repos/${2}/tarball/${3:-master}}
+	TGZ=$(curl -sfLJO ${GH_TOKEN:+-u $GH_TOKEN} -w '%{filename_effective}' $URL)
+	install_tgz $1 $2 $TGZ
 }
 
 # Extract the tarball and re-zip (store only) using the canonicalised name.
@@ -86,36 +69,39 @@ function install_g {
 # specify a SLUG.
 function install_tgz {
 	local TMP=$(mktemp -d)
-	mkdir -p $TMP/${REPO##*/}
-	tar xzf $2 --strip-components 1 -C $TMP/${REPO##*/} && rm $2
-	( cd $TMP; zip -0qrm ${REPO##*/}.zip ${REPO##*/} )
-	wp $1 install $TMP/${REPO##*/}.zip --force --activate
+	mkdir -p $TMP/${2##*/}
+	tar xzf $3 --strip-components 1 -C $TMP/${2##*/} && rm $3
+	( cd $TMP; zip -0qrm ${2##*/}.zip ${2##*/} )
+	wp $1 install $TMP/${2##*/}.zip --force --activate
 	rm -rf $TMP
-}
-
-# Connect as root and create the WP DB and user with priv's.
-function db {
-	mysql --connect_timeout=60 -h$WP_DB_HOST -P$WP_DB_PORT -uroot -p$MYSQL_ROOT_PASSWORD <<EOSQL
-		CREATE DATABASE IF NOT EXISTS $WP_DB_NAME;
-		GRANT ALL PRIVILEGES ON $WP_DB_NAME.* TO "$WP_DB_USER" IDENTIFIED BY "$WP_DB_PASSWORD";
-		FLUSH PRIVILEGES;
-EOSQL
 }
 
 function install_core {
 	# Setup the database
-	while ! db; do sleep 1; done
+	# Wait for the MySQL server
+	while ! mysql -h$WP_DB_HOST -P$WP_DB_PORT -uroot -p$MYSQL_ROOT_PASSWORD; do sleep 5; done
+	# The local mysql seems to hang and go defunct! TODO fix!
+	local SQL="CREATE DATABASE IF NOT EXISTS $WP_DB_NAME; GRANT ALL PRIVILEGES ON $WP_DB_NAME.* TO \"$WP_DB_USER\" IDENTIFIED BY \"$WP_DB_PASSWORD\";	FLUSH PRIVILEGES; SHOW GRANTS FOR \"$WP_DB_USER\""
+	local PHP='
+		$mysqli = new mysqli($_SERVER["WP_DB_HOST"], "root", $_SERVER["MYSQL_ROOT_PASSWORD"], "", $_SERVER["WP_DB_PORT"]);
+		if ($mysqli->connect_error) exit(1);
+		$mysqli->multi_query($_SERVER["SQL"]);
+		do {
+			if ($result = $mysqli->use_result()) {
+				echo implode(PHP_EOL, $result->fetch_array());
+				$result->close();
+			}
+		} while ($mysqli->next_result());
+		$mysqli->close();
+	'
+	SQL="$SQL" wp eval --skip-wordpress "$PHP"
 
 	# Always download the lastest WP
 	wp core download --locale="${WP_LOCALE}" || true
 
 	# Configure the database
-	# Assume that a DB has already been created
-	# Skip the DB check as there isn't a mysql client available
 	rm -f wp-config.php
-
 	wp core config \
-			--skip-check \
 			--locale="${WP_LOCALE}" \
 			--dbname="${WP_DB_NAME}" \
 			--dbuser="${WP_DB_USER}" \
@@ -124,7 +110,6 @@ function install_core {
 			--dbprefix="${WP_DB_PREFIX}" \
 			--extra-php <<< "${WP_EXTRA_PHP}"
 
-	# TODO Fix sh: 1: /usr/sbin/sendmail: not found
 	# Configure the Blog
 	wp core is-installed || wp core install \
 			--url="$WP_URL" \
@@ -134,44 +119,52 @@ function install_core {
 			--admin_email="$WP_ADMIN_EMAIL"
 }
 
-function install_themes {
-	install_a theme <<< "$WP_THEMES"
-	install_g theme <<< "$GH_THEMES"
-	install_b theme <<< "$BB_THEMES"
+# Install themes or plugins from env vars
+function install_x {
+	export -f install_{a,b,g,tgz}
+	local X=$(shopt -qo xtrace && echo "-x")
+	for V in {WP,GH,BB}_$1
+	do
+		xargs --no-run-if-empty -l1 bash $X -e -c '"${@}"' _ install_$(echo ${V::1} | tr WGB agb) $2 <<< "${!V}"
+	done
 }
 
+# Install themes from env vars
+function install_themes {
+	install_x THEMES theme
+}
+
+# Install plugins from env vars
 function install_plugins {
-	install_a plugin <<< "$WP_PLUGINS"
-	install_g plugin <<< "$GH_PLUGINS"
-	install_b plugin <<< "$BB_PLUGINS"
+	install_x PLUGINS plugin
 }
 
 # Sets options as specified in STDIN.
 # Expects format of OPTION_NAME JSON_STRING
 function wp_options {
-	while read OPTION JSON;
-	do
-		if [ "$OPTION" -a "$JSON" ]
-		then
-			wp option set "$OPTION" "$JSON" --format=json
-		fi
-	done <<< "$WP_OPTIONS"
+	xargs --no-run-if-empty -l1 wp option set --format=json <<< "$WP_OPTIONS"
 }
 
 # Allows execution of arbitrary WP-CLI commands.
 # I suppose this is either quite dangerous and makes most of
 # the rest of this script redundant.
 function wp_commands {
-	while read CMD;
-	do
-		[ -z "$CMD" ] || wp $CMD
-	done <<< "$WP_COMMANDS"
+	xargs --no-run-if-empty -l1 wp <<< "$WP_COMMANDS"
 }
 
 function import {
-	wp plugin is-installed wordpress-importer || install_a plugin <<< "wordpress-importer"
+	wp plugin is-installed wordpress-importer || install_a plugin wordpress-importer
 	# wp option update siteurl "$WP_URL"
 	# wp option update home "$WP_URL"
 	echo 'Importing, this may take a *very* long time.'
 	wp import $WP_IMPORT --authors=create --skip=image_resize --quiet "$@"
+}
+
+# All rrolled up into one function.
+function setup {
+	install_core
+	install_themes
+	install_plugins
+	wp_options
+	wp_commands
 }
