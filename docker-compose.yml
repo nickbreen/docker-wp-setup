@@ -6,16 +6,55 @@ db:
     MYSQL_USER: wordpress
     MYSQL_PASSWWORD: wordpress
 
-wp:
+wp-cron:
   build: .
-  # enable xtrace for testing
-  command: [ "-x", "-c", "-e", ". /setup.sh; setup" ]
+  entrypoint: [ "/entrypoint.sh" ]
+  command: [ "cron", "-f", "-L15" ]
+  user: root
   links:
     - db:mysql
+  volumes:
+    - /var/mail
+  environment:
+    CRON_OWNER: wp
+    CRON_TAB: |
+      PATH=/usr/local/bin:$PATH
+      * * * * * cd /var/www/html; wp cron event list --format=csv  --fields=hook,next_run_relative | awk -F ',' '$$2 == "now" {print $$1}' | xargs -r -l1 wp cron event run
+
+wp-cron-log:
+  build: .
+  entrypoint: [ "bash" ]
+  command: [ "-x", "-e", "-c", "while ! tail -F /var/mail/*; do sleep 1; done" ]
+  volumes_from:
+    - wp-cron
+
+wp-setup:
+  build: .
+  command: [ "-c", "-e", "-x", ". /setup.sh; setup" ]
+  links:
+    - db:mysql
+  volumes_from:
+    - wp-cron
   environment:
     WP_URL: http://cli.dev
     WP_ADMIN_USER: admin
     WP_ADMIN_PASSWORD: admin
     WP_ADMIN_EMAIL: admin@cli.dev
+    WP_PLUGINS: |-
+      rest-api
     GH_PLUGINS: |-
-      WP-API/WP-API
+      WP-API/OAuth1
+      WP-API/Basic-Auth
+    WP_EXTRA_PHP: |-
+      define('DISABLE_WP_CRON', true);
+
+wp:
+  build: .
+  entrypoint: [ "bash" ]
+  command: [ "-x", "-e", "-c", "while ! wp server --host=0.0.0.0 --docroot=/var/www/html; do sleep 5; done" ]
+  links:
+    - db:mysql
+  ports:
+    - 8080:8080
+  volumes_from:
+    - wp-cron

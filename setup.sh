@@ -125,7 +125,7 @@ function install_x {
 	local X=$(shopt -qo xtrace && echo "-x")
 	for V in {WP,GH,BB}_$1
 	do
-		xargs --no-run-if-empty -l1 bash $X -e -c '"${@}"' _ install_$(echo ${V::1} | tr WGB agb) $2 <<< "${!V}"
+		xargs -r -L 1 bash $X -e -c '"${@}"' _ install_$(echo ${V::1} | tr WGB agb) $2 <<< "${!V}"
 	done
 }
 
@@ -142,14 +142,17 @@ function install_plugins {
 # Sets options as specified in STDIN.
 # Expects format of OPTION_NAME JSON_STRING
 function wp_options {
-	xargs --no-run-if-empty -l1 wp option set --format=json <<< "$WP_OPTIONS"
+	[ -z $WP_OPTIONS ] || while read OPT VALUE
+	do
+		wp option set --format=json $OPT "$VALUE"
+	done <<< "$WP_OPTIONS"
 }
 
 # Allows execution of arbitrary WP-CLI commands.
 # I suppose this is either quite dangerous and makes most of
 # the rest of this script redundant.
 function wp_commands {
-	xargs --no-run-if-empty -l1 wp <<< "$WP_COMMANDS"
+	xargs -r -L 1 wp <<< "$WP_COMMANDS"
 }
 
 function import {
