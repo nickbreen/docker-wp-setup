@@ -38,3 +38,6 @@ VOLUME /var/www/html /var/www/html/wp-content/uploads
 WORKDIR /var/www/html
 
 USER wp
+
+ENTRYPOINT [ "bash" ]
+CMD [ "-c", "-e", ". /setup.sh; setup" ]

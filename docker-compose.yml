@@ -8,12 +8,8 @@ db:
 
 wp:
   build: .
-  entrypoint: bash
-  command: |-
-    -c -x -e '
-    . /setup.sh
-    setup
-    '
+  # enable xtrace for testing
+  command: [ "-x", "-c", "-e", ". /setup.sh; setup" ]
   links:
     - db:mysql
   environment:
