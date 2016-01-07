@@ -106,7 +106,7 @@ function install_core {
 	# Configure the Blog
 	wp core is-installed || wp core install \
 			--url="${WP_URL:?WP_URL is required}" \
-			--title="$WP_TITLE" \
+			${WP_TITLE:+--title="$WP_TITLE"} \
 			--admin_user="$WP_ADMIN_USER" \
 			--admin_password="$WP_ADMIN_PASSWORD" \
 			--admin_email="$WP_ADMIN_EMAIL"
