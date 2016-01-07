@@ -4,7 +4,7 @@ db:
     MYSQL_ROOT_PASSWORD: example
     MYSQL_DATABASE: wordpress
     MYSQL_USER: wordpress
-    MYSQL_PASSWWORD: wordpress
+    MYSQL_PASSWORD: wordpress
 
 wp-cron:
   build: .

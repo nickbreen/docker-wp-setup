@@ -3,7 +3,7 @@ FROM nickbreen/wp-cli
 MAINTAINER Nick Breen <nick@foobar.net.nz>
 
 ENV MYSQL_ROOT_PASSWORD="" \
-    WP_LOCALE="en_NZ" \
+    WP_LOCALE="" \
     WP_DB_HOST="" \
     WP_DB_PORT="" \
     WP_DB_NAME="" \
