@@ -106,7 +106,7 @@ function install_core {
 	# Configure the Blog
 	wp core is-installed || wp core install \
 			--url="${WP_URL:?WP_URL is required}" \
-			${WP_TITLE:+--title="$WP_TITLE"} \
+			--title="$WP_TITLE" \
 			--admin_user="$WP_ADMIN_USER" \
 			--admin_password="$WP_ADMIN_PASSWORD" \
 			--admin_email="$WP_ADMIN_EMAIL"
@@ -159,7 +159,7 @@ function import {
 	wp import $WP_IMPORT --authors=create --skip=image_resize --quiet "$@"
 }
 
-# All rrolled up into one function.
+# All rolled up into one function.
 function setup {
 	install_core
 	install_themes
