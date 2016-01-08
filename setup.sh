@@ -105,23 +105,16 @@ function install_core {
 }
 
 # Install themes or plugins from env vars
+# Usage:
+#    install_x theme|plugin VARS...
+#
 function install_x {
 	export -f install_{a,b,g,tgz}
 	local X=$(shopt -qo xtrace && echo "-x")
-	for V in {WP,GH,BB}_$1
+	for V in "${@:1}"
 	do
-		xargs -r -L 1 bash $X -e -c '"${@}"' _ install_$(echo ${V::1} | tr WGB agb) $2 <<< "${!V}"
+		xargs -r -L 1 bash $X -e -c '"${@}"' _ install_$(echo ${V::1} | tr WGB agb) $1 <<< "${!V}"
 	done
-}
-
-# Install themes from env vars
-function install_themes {
-	install_x THEMES theme
-}
-
-# Install plugins from env vars
-function install_plugins {
-	install_x PLUGINS plugin
 }
 
 # Sets options as specified in STDIN.
@@ -151,8 +144,8 @@ function import {
 # All rolled up into one function.
 function setup {
 	install_core
-	install_themes
-	install_plugins
+	install_x theme {WP,GH,BB}_THEMES
+	install_x plugin {WP,GH,BB}_PLUGINS
 	wp_options
 	wp_commands
 }
