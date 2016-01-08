@@ -8,31 +8,20 @@ echo WP_DB_PASSWORD = ${WP_DB_PASSWORD:=$MYSQL_ENV_MYSQL_PASSWORD}
 echo WP_DB_HOST = ${WP_DB_HOST:=$MYSQL_PORT_3306_TCP_ADDR}
 echo WP_DB_PORT = ${WP_DB_PORT:=$MYSQL_PORT_3306_TCP_PORT}
 
-# Installs themes or plugins from a list on STDIN.
-#
-# STDIN format each line: slug [URL]
-# E.g.
-#   hello-dolly
-#   wordpress-importer
-#   some-other-plugin http://some.other/plugin.zip
+# Installs a theme or plugin.
 #
 # Usage:
-#   install_a plugin <<< "plugin_slug|plugin_url"
-#   install_a theme <<-EOT
-#     theme_slug1
-#     http://theme_url2
-#   EOT
+#   install_a plugin plugin_slug|plugin_url
+#   install_a theme theme_slug1
+#   install_a theme http://theme_url2
 #
 function install_a {
-	while read SLUG
-	do
-		wp $1 is-installed $SLUG || wp $1 install $SLUG --activate
-	done
+	wp $1 is-installed $2 || wp $1 install $2 --activate
 }
 
-# Installs themes or plugins specified on STDIN hosted at BitBucket.
+# Installs a theme or plugin hosted at BitBucket.
 # Usage:
-#   install_b plugin|theme <<< "REPO TAG"
+#   install_b plugin|theme REPO [TAG]
 #
 # REPO is the account/repository.
 # TAG is optionally any tag|branch|commitish
@@ -45,9 +34,9 @@ function install_b {
 	install_tgz $1 $TGZ
 }
 
-# Installs themes or plugins specified on STDIN hosted at GitHub.
+# Installs a theme or plugin hosted at GitHub.
 # Usage:
-#   install_g plugin|theme <<< "REPO [TAG]"
+#   install_g plugin|theme REPO [TAG]
 #
 # REPO is the account/repository.
 # TAG is optionally any release|tag|branch|commitish
