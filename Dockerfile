@@ -40,4 +40,4 @@ WORKDIR /var/www/html
 USER wp
 
 ENTRYPOINT [ "bash" ]
-CMD [ "-c", "-e", ". /setup.sh; setup" ]
+CMD [ "-e", "-c", ". /setup.sh; setup" ]
