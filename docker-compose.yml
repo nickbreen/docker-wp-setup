@@ -30,7 +30,7 @@ wp-cron-log:
 
 wp-setup:
   build: .
-  command: [ "-c", "-e", "-x", ". /setup.sh; setup" ]
+  #command: [ "-c", "-e", "-x", ". /setup.sh; setup" ]
   links:
     - db:mysql
   volumes_from:
