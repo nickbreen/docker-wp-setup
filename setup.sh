@@ -120,7 +120,7 @@ function install_x {
 # Sets options as specified in STDIN.
 # Expects format of OPTION_NAME JSON_STRING
 function wp_options {
-	[ -z $WP_OPTIONS ] || while read OPT VALUE
+	[ $WP_OPTIONS ] || while read OPT VALUE
 	do
 		wp option set --format=json $OPT "$VALUE"
 	done <<< "$WP_OPTIONS"

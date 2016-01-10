@@ -32,7 +32,7 @@ RUN php -l /oauth.php && bash -n /setup.sh
 RUN mkdir -p /var/www/html/wp-content/uploads && \
   chown -R wp:wp /var/www/html && \
   chown wp:www-data /var/www/html/wp-content/uploads && \
-  chmod g+w /var/www/html/wp-content/uploads
+  chmod g+ws /var/www/html/wp-content/uploads
 
 VOLUME /var/www/html /var/www/html/wp-content/uploads
 WORKDIR /var/www/html
