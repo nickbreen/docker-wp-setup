@@ -23,21 +23,22 @@ ENV MYSQL_ROOT_PASSWORD="" \
     WP_IMPORT="" \
     WP_EXTRA_PHP=""
 
-RUN useradd -m wp && chown -R wp:wp /home/wp
+COPY oauth.php /usr/share/php/
 
-COPY setup.sh oauth.php /
+COPY setup.sh /etc/profile.d/
 
-RUN php -l /oauth.php && bash -n /setup.sh
+RUN php -l /usr/share/php/oauth.php && bash -n /etc/profile.d/setup.sh
 
-RUN mkdir -p /var/www/html/wp-content/uploads && \
-  chown -R wp:wp /var/www/html && \
-  chown wp:www-data /var/www/html/wp-content/uploads && \
-  chmod g+ws /var/www/html/wp-content/uploads
+RUN useradd -M -N -g www-data -d /var/www -s /bin/bash wp
 
-VOLUME /var/www/html /var/www/html/wp-content/uploads
-WORKDIR /var/www/html
+RUN mkdir -p /var/www/wp-content/uploads && \
+  chown -R wp:www-data /var/www && \
+  chmod -R g-w /var/www && \
+  chmod -R g+w /var/www/wp-content/uploads
 
-USER wp
+VOLUME /var/www /var/www/wp-content/uploads
 
-ENTRYPOINT [ "bash" ]
-CMD [ "-c", ". /setup.sh; setup" ]
+WORKDIR /var/www
+
+ENTRYPOINT [ "/sbin/my_init", "--", "setuser", "wp", "bash", "-l" ]
+CMD [ "-c", "setup" ]

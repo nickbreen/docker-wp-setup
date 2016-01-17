@@ -30,7 +30,7 @@ function install_a {
 #
 function install_b {
 	local URL="https://bitbucket.org/${2}/get/${3:-master}.tar.gz"
-	TGZ=$(php /oauth.php -O -k "$BB_KEY" -s "$BB_SECRET" -- $URL)
+	TGZ=$(php oauth.php -O -k "$BB_KEY" -s "$BB_SECRET" -- $URL)
 	install_tgz $1 $TGZ
 }
 
@@ -66,20 +66,20 @@ function install_tgz {
 }
 
 function install_core {
+	# Download the lastest WP, preferebly with the selected locale, but fall back to the default locale.
+	wp core download ${WP_LOCALE:+--locale="$WP_LOCALE"} || wp core download || true
+
 	X=$(shopt -qo xtrace && echo "-vvv")
 	# Setup the database if required.
 	local SQL="CREATE DATABASE IF NOT EXISTS $WP_DB_NAME; CREATE USER '$WP_DB_USER' IDENTIFIED BY '$WP_DB_PASSWORD'; GRANT ALL PRIVILEGES ON $WP_DB_NAME.* TO '$WP_DB_USER';	FLUSH PRIVILEGES; SHOW GRANTS FOR \"$WP_DB_USER\""
 	echo Waiting for the server at $WP_DB_HOST
-	while ! mysql ${X} -h$WP_DB_HOST -P$WP_DB_PORT -uroot -p$MYSQL_ROOT_PASSWORD -e "SELECT VERSION();"; do echo Err: $?; sleep 5; done
+	while ! mysql ${X} -h$WP_DB_HOST -P$WP_DB_PORT -uroot -p$MYSQL_ROOT_PASSWORD -e "SELECT VERSION();"; do sleep 5; done
 	echo Checking the DB $WP_DB_NAME and USER $WP_DB_USER is available.
 	if ! mysql ${X} -h$WP_DB_HOST -P$WP_DB_PORT -u$WP_DB_USER -p$WP_DB_PASSWORD $WP_DB_NAME -e "SELECT DATABASE(), USER();"
 	then
 		echo Set up the DB $WP_DB_NAME and USER $WP_DB_USER.
-		while ! mysql ${X} -h$WP_DB_HOST -P$WP_DB_PORT -uroot -p$MYSQL_ROOT_PASSWORD $WP_DB_NAME -e "$SQL"; do echo Err: $?; sleep 5; done
+		while ! mysql ${X} -h$WP_DB_HOST -P$WP_DB_PORT -uroot -p$MYSQL_ROOT_PASSWORD $WP_DB_NAME -e "$SQL"; do sleep 5; done
 	fi
-
-	# Download the lastest WP, preferebly with the selected locale, but fall back to the default locale.
-	wp core download ${WP_LOCALE:+--locale="$WP_LOCALE"} || wp core download || true
 
 	# Configure the database
 	rm -f wp-config.php
@@ -98,10 +98,8 @@ function install_core {
 			--title="$WP_TITLE" \
 			--admin_user="$WP_ADMIN_USER" \
 			--admin_password="$WP_ADMIN_PASSWORD" \
-			--admin_email="$WP_ADMIN_EMAIL"
-	# --skip-email doesn't seem to be supported - despite it being
-	# in the [online docs](http://wp-cli.org/commands/core/install/)
-	# and [the code](https://github.com/wp-cli/wp-cli/blob/master/php/commands/core.php#L542)
+			--admin_email="$WP_ADMIN_EMAIL" \
+			--skip-email
 }
 
 # Install themes or plugins from env vars
