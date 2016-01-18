@@ -1,5 +1,7 @@
 #!/bin/bash
 
+X=$(shopt -qo xtrace && echo "-x")
+
 # Juggle ENV VARS
 echo MYSQL_ROOT_PASSWORD = ${MYSQL_ROOT_PASSWORD:=$MYSQL_ENV_MYSQL_ROOT_PASSWORD}
 echo WP_DB_NAME = ${WP_DB_NAME:=$MYSQL_ENV_MYSQL_DATABASE}
@@ -30,8 +32,8 @@ function install_a {
 #
 function install_b {
 	local URL="https://bitbucket.org/${2}/get/${3:-master}.tar.gz"
-	TGZ=$(php oauth.php -O -k "$BB_KEY" -s "$BB_SECRET" -- $URL)
-	install_tgz $1 $TGZ
+	TGZ=$(php /usr/local/share/php/oauth.php -O -k "$BB_KEY" -s "$BB_SECRET" -- $URL)
+	install_tgz $1 $2 $TGZ
 }
 
 # Installs a theme or plugin hosted at GitHub.
@@ -69,16 +71,16 @@ function install_core {
 	# Download the lastest WP, preferebly with the selected locale, but fall back to the default locale.
 	wp core download ${WP_LOCALE:+--locale="$WP_LOCALE"} || wp core download || true
 
-	X=$(shopt -qo xtrace && echo "-vvv")
+	local V=$(shopt -qo xtrace && echo "-vvv")
 	# Setup the database if required.
 	local SQL="CREATE DATABASE IF NOT EXISTS $WP_DB_NAME; CREATE USER '$WP_DB_USER' IDENTIFIED BY '$WP_DB_PASSWORD'; GRANT ALL PRIVILEGES ON $WP_DB_NAME.* TO '$WP_DB_USER';	FLUSH PRIVILEGES; SHOW GRANTS FOR \"$WP_DB_USER\""
 	echo Waiting for the server at $WP_DB_HOST
-	while ! mysql ${X} -h$WP_DB_HOST -P$WP_DB_PORT -uroot -p$MYSQL_ROOT_PASSWORD -e "SELECT VERSION();"; do sleep 5; done
+	while ! mysql $V -h$WP_DB_HOST -P$WP_DB_PORT -uroot -p$MYSQL_ROOT_PASSWORD -e "SELECT VERSION();"; do sleep 5; done
 	echo Checking the DB $WP_DB_NAME and USER $WP_DB_USER is available.
-	if ! mysql ${X} -h$WP_DB_HOST -P$WP_DB_PORT -u$WP_DB_USER -p$WP_DB_PASSWORD $WP_DB_NAME -e "SELECT DATABASE(), USER();"
+	if ! mysql $V -h$WP_DB_HOST -P$WP_DB_PORT -u$WP_DB_USER -p$WP_DB_PASSWORD $WP_DB_NAME -e "SELECT DATABASE(), USER();"
 	then
 		echo Set up the DB $WP_DB_NAME and USER $WP_DB_USER.
-		while ! mysql ${X} -h$WP_DB_HOST -P$WP_DB_PORT -uroot -p$MYSQL_ROOT_PASSWORD $WP_DB_NAME -e "$SQL"; do sleep 5; done
+		while ! mysql $V -h$WP_DB_HOST -P$WP_DB_PORT -uroot -p$MYSQL_ROOT_PASSWORD -e "$SQL"; do sleep 5; done
 	fi
 
 	# Configure the database
@@ -108,7 +110,6 @@ function install_core {
 #
 function install_x {
 	export -f install_{a,b,g,tgz}
-	local X=$(shopt -qo xtrace && echo "-x")
 	for V in "${@:1}"
 	do
 		xargs -r -L 1 bash $X -e -c '"${@}"' _ install_$(echo ${V::1} | tr WGB agb) $1 <<< "${!V}"
@@ -118,15 +119,17 @@ function install_x {
 # Sets options as specified in STDIN.
 # Expects format of OPTION_NAME JSON_STRING
 function wp_options {
-	[ $WP_OPTIONS ] || while read OPT VALUE
+	[ -z "$WP_OPTIONS" ] || while read OPT VALUE
 	do
-		wp option set --format=json $OPT "$VALUE"
+		wp option set --format=json "$OPT" "$VALUE"
 	done <<< "$WP_OPTIONS"
 }
 
 # Allows execution of arbitrary WP-CLI commands.
 # I suppose this is either quite dangerous and makes most of
 # the rest of this script redundant.
+# Use this carefully as it, rather xargs, will process quotes.
+# If you command contains quotes they shall not pass! Without escaping that is.
 function wp_commands {
 	xargs -r -L 1 wp <<< "$WP_COMMANDS"
 }

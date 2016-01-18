@@ -23,11 +23,12 @@ ENV MYSQL_ROOT_PASSWORD="" \
     WP_IMPORT="" \
     WP_EXTRA_PHP=""
 
-COPY oauth.php /usr/share/php/
+RUN mkdir -p /usr/local/share/php/
+COPY oauth.php /usr/local/share/php/
 
 COPY setup.sh /etc/profile.d/
 
-RUN php -l /usr/share/php/oauth.php && bash -n /etc/profile.d/setup.sh
+RUN php -l /usr/local/share/php/oauth.php && bash -n /etc/profile.d/setup.sh
 
 RUN useradd -M -N -g www-data -d /var/www -s /bin/bash wp
 
@@ -40,5 +41,5 @@ VOLUME /var/www /var/www/wp-content/uploads
 
 WORKDIR /var/www
 
-ENTRYPOINT [ "/sbin/my_init", "--", "setuser", "wp", "bash", "-l" ]
-CMD [ "-c", "setup" ]
+# Actually don't do this, just run happily as a daemon,
+#CMD [ "/sbin/my_init", "--", "setuser", "wp", "bash", "-l", "-c", "setup" ]
