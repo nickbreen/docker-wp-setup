@@ -13,6 +13,10 @@ wp:
     - db:mysql
   ports:
     - 80:8080
+  environment:
+    CRON_D_WP: |
+      PATH=/usr/local/bin:$$PATH
+      * * * * * wp wp cron event list --format=csv --fields=hook,next_run_relative | awk -F ',' '$$2 == "now" {print $$1}' | xargs -r -l1 wp cron event run
 
 setup-main:
   build: .
@@ -23,105 +27,43 @@ setup-main:
   environment:
     WP_EXTRA_PHP: |-
       define('DISABLE_WP_CRON', true);
-    CRON_D_WP: |-
-      PATH=/usr/local/bin:$$PATH
-      * * * * * wp wp cron event list --format=csv --fields=hook,next_run_relative --path=/var/www | awk -F ',' '$$2 == "now" {print $$1}' | xargs -r -l1 wp cron event run --path=/var/www
     WP_TITLE: Main Site
     WP_SUBDOMAINS: "yes"
     WP_URL: http://foobar.dev
     WP_ADMIN_USER: admin
     WP_ADMIN_PASSWORD: admin
     WP_ADMIN_EMAIL: webmaster+admin@foobar.net.nz
-    WP_PLUGINS: |-
-      amazon-s3-and-cloudfront
-      amazon-web-services
-      jetpack
-      multisite-enhancements
-      multisite-plugin-manager
-      user-switching
-      wordpress-mu-domain-mapping
-      wp-ses
-    GH_PLUGINS: |-
-      WP-API/OAuth1
-      WP-API/Basic-Auth
-    GH_THEMES: |-
-      CherryFramework/CherryFramework
-    BB_KEY: qAMQvMs9L7ktMxNZwE
-    BB_SECRET: pUnHEE9gAQvExenRwTC67a5vAyXLnfy6
-    BB_PLUGINS: |-
-      nickbreen/kidslink-plugin v1.5.7
-    BB_THEMES: |-
-      nickbreen/kidslink-theme v1.5.6
     WP_EXTRA_PHP: |-
       define('DISABLE_WP_CRON', true);
-      define( 'SUNRISE', 'on' );
-    WP_OPTIONS: |-
-      foo {"foo":"FOO","bar":"BAR"}
-    WP_COMMANDS: |-
+      //define( 'SUNRISE', 'on' );
+    WP_COMMANDS_MAIN: |-
       db query "UPDATE wp_site SET domain = '' WHERE domain = 'foobar.dev' AND 1=2"
       site list
-      site create --slug=kidslink.dev --title=KidsLink --email=webmaster+kidslink@foobar.net.nz
-      site list
-      db query "UPDATE wp_blogs SET domain = 'kidslink.dev' WHERE domain = 'kidslink.foobar.dev'"
-      option update siteurl http://kidslink.dev --url=http://kidslink.dev
-      option update home http://kidslink.dev --url=http://kidslink.dev
-      plugin activate kidslink-plugin --url=http://kidslink.dev
-      theme activate kidslink-theme  --url=http://kidslink.dev
+      plugin install amazon-s3-and-cloudfront --activate-network
+      plugin install amazon-web-services --activate-network
+      plugin install jetpack --activate-network
+      plugin install multisite-enhancements --activate-network
+      plugin install multisite-plugin-manager --activate-network
+      plugin install user-switching --activate-network
+      plugin install wp-ses --activate-network
+      github plugin install WP-API/OAuth1 --token=nickbreen:937c370d4c3c04c3faad2f6e7e745038aaba34dc
+      github plugin install WP-API/Basic-Auth --token=nickbreen:937c370d4c3c04c3faad2f6e7e745038aaba34dc
       rewrite structure /%postname%
       rewrite flush
-
-setup-test:
-  build: .
-  links:
-    - db:mysql
-  volumes_from:
-    - wp
-  environment:
-    WP_EXTRA_PHP: |-
-      define('DISABLE_WP_CRON', true);
-    CRON_D_WP: |-
-      PATH=/usr/local/bin:$$PATH
-      * * * * * wp wp cron event list --format=csv --fields=hook,next_run_relative --path=/var/www | awk -F ',' '$$2 == "now" {print $$1}' | xargs -r -l1 wp cron event run --path=/var/www
-    WP_TITLE: foo//bar WordPress
-    WP_SUBDOMAINS: "yes"
-    WP_URL: http://foobar.dev
-    WP_ADMIN_USER: admin
-    WP_ADMIN_PASSWORD: admin
-    WP_ADMIN_EMAIL: webmaster+foobar.admin@foobar.net.nz
-    WP_PLUGINS: |-
-      amazon-s3-and-cloudfront
-      amazon-web-services
-      jetpack
-      multisite-enhancements
-      multisite-plugin-manager
-      user-switching
-      wordpress-mu-domain-mapping
-      wp-ses
-    GH_PLUGINS: |-
-      WP-API/OAuth1
-      WP-API/Basic-Auth
-    GH_THEMES: |-
-      CherryFramework/CherryFramework
-    BB_KEY: qAMQvMs9L7ktMxNZwE
-    BB_SECRET: pUnHEE9gAQvExenRwTC67a5vAyXLnfy6
-    BB_PLUGINS: |-
-      nickbreen/kidslink-plugin v1.5.7
-    BB_THEMES: |-
-      nickbreen/kidslink-theme v1.5.6
-    WP_EXTRA_PHP: |-
-      define('DISABLE_WP_CRON', true);
-      define( 'SUNRISE', 'on' );
-    WP_OPTIONS: |-
-      foo {"foo":"FOO","bar":"BAR"}
-    WP_COMMANDS: |-
-      db query "UPDATE wp_site SET domain = '' WHERE domain = 'foobar.dev' AND 1=2"
-      site list
-      site create --slug=kidslink.dev --title=KidsLink --email=webmaster+kidslink@foobar.net.nz
-      site list
+    X: |-
+      plugin install wordpress-mu-domain-mapping --activate-network
+    WP_COMMANDS_KIDSLINK: |-
+      site create --slug=kidslink --title=KidsLink --email=webmaster+admin@foobar.net.nz
       db query "UPDATE wp_blogs SET domain = 'kidslink.dev' WHERE domain = 'kidslink.foobar.dev'"
-      option update siteurl http://kidslink.dev --url=http://kidslink.dev
-      option update home http://kidslink.dev --url=http://kidslink.dev
-      plugin activate kidslink-plugin --url=http://kidslink.dev
-      theme activate kidslink-theme  --url=http://kidslink.dev
-      rewrite structure /%postname%
-      rewrite flush
+      site list
+      github theme install CherryFramework/CherryFramework --token=nickbreen:937c370d4c3c04c3faad2f6e7e745038aaba34dc
+      bitbucket theme install nickbreen/kidslink-theme v1.5.6 --key=qAMQvMs9L7ktMxNZwE --secret=pUnHEE9gAQvExenRwTC67a5vAyXLnfy6
+      bitbucket plugin install nickbreen/kidslink-plugin v1.5.7 --key=qAMQvMs9L7ktMxNZwE --secret=pUnHEE9gAQvExenRwTC67a5vAyXLnfy6
+      --url=http://kidslink.dev plugin activate kidslink-plugin
+      --url=http://kidslink.dev theme activate kidslink-theme
+      --url=http://kidslink.dev option update siteurl http://kidslink.dev
+      --url=http://kidslink.dev option update home http://kidslink.dev
+      --url=http://kidslink.dev option update --format=json aws_settings {"access_key_id":"AKIAJPNRMJWKXVHDO6WA","secret_access_key":"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"}
+      --url=http://kidslink.dev option update --format=json tantan_wordpress_s3 {"post_meta_version":3,"bucket":"s3.kidslink.co.nz","region":"ap-southeast-2","domain":"path","expires":"0","cloudfront":"","object-prefix":"wp-content\/uploads\/","copy-to-s3":"1","serve-from-s3":"1","remove-local-file":"1","ssl":"request","hidpi-images":"0","object-versioning":"0","use-yearmonth-folders":"1","enable-object-prefix":"1"}
+      --url=http://kidslink.dev rewrite structure /%postname%
+      --url=http://kidslink.dev rewrite flush

@@ -4,6 +4,41 @@
  */
 abstract class SCM_Command extends WP_CLI_Command {
 
+  const TGZ_TO_ZIP = <<<'EOS'
+TMP=$(mktemp -d)
+mkdir -p "$TMP/${2##*/}"
+tar xzf $3 --strip-components 1 -C "$TMP/${2##*/}"
+( cd $TMP; zip -0qrm "${2##*/}.zip" "${2##*/}" )
+echo -n "$TMP/${2##*/}.zip"
+EOS;
+
+  const RE = <<<'ERE'
+/
+(?P<media>[^\/]+)
+\/
+(?:(?P<tree>.+)\.)?
+(?P<subtype>[^;+]+)
+(?:\+(?P<suffix>[^;]+))?
+(?P<parameters_scalar>
+(?: #P<parameter>
+  ;[ ]
+  (?: #P<pname>
+    [^=]+)
+  (?:=(?: #P<pvalue>
+    [^;]*))?
+)*
+)
+/x
+ERE;
+
+  const PRE = <<<'ERE'
+/
+;[ ]
+(?P<pname>[^=]+)
+(?:=(?P<pvalue>[^;]*))?
+/x
+ERE;
+
   /**
    * Prints a greeting.
    *
@@ -30,14 +65,7 @@ abstract class SCM_Command extends WP_CLI_Command {
    */
   static protected function tgz_to_zip($repo, $tgz) {
     // TODO pure PHP
-    $zip = shell_exec("set - - $repo $tgz" . PHP_EOL . <<<'EOS'
-TMP=$(mktemp -d)
-mkdir -p $TMP/${2##*/}
-tar xzf $3 --strip-components 1 -C $TMP/${2##*/}
-( cd $TMP; zip -0qrm ${2##*/}.zip ${2##*/} )
-echo -n $TMP/${2##*/}.zip
-EOS
-    );
+    $zip = shell_exec("set - - $repo $tgz" . PHP_EOL . self::TGZ_TO_ZIP);
     return $zip;
   }
 
@@ -55,150 +83,24 @@ EOS
     return shell_exec("echo -n $(readlink -n -f .)/; curl -sSfLJO -w '%{filename_effective}' ${auth} ${url}");
   }
 
-  static protected abstract function tgz($args, $assoc_args);
-
-  static protected function apply($cmd, $args, $assoc_args) {
-    $op = array_shift($args);
-    list($url, $tgz, $zip) = static::tgz($args, $assoc_args);
-    WP_CLI::log("Installing from $zip");
-    WP_CLI::run_command(array($cmd, $op, $zip), array('force' => 1));
-    WP_CLI::log("Removing $tgz, $zip");
-    unlink($tgz);
-    unlink($zip);
-  }
-}
-
-/**
- * Provides for installation of plugins and themes from GitHub.
- */
-class GitHub_Command extends SCM_Command {
-
-  static protected function tgz($args, $assoc_args) {
-    list( $repo, $tag ) = $args;
-    // Get the tarball URL for the latest (or specified release)
-    $url = sprintf("https://api.github.com/repos/%s/releases/%s", $repo, $tag ? "tags/${tag}" : 'latest');
-    WP_CLI::log("Querying for releases: $url");
-    $url = self::tarball_url($url, @$assoc_args['token']);
-
-    // If no releases are available fail-back to a commitish
-    if ($url)
-      WP_CLI::log("Found release: $url");
-    else
-      $url = sprintf("https://api.github.com/repos/%s/tarball/%s", $repo, $tag ?: 'master');
-
-    WP_CLI::log("Fetching $url");
-    $tgz = self::fetch_tarball($url, @$assoc_args['token']);
-    WP_CLI::log("Fetched $tgz");
-
-    WP_CLI::log("Converting $tgz to zip");
-    $zip = self::tgz_to_zip($repo, $tgz);
-    WP_CLI::log("Converted $tgz to $zip");
-
-    return array($url, $tgz, $zip);
-  }
-
-  /**
-   * Installs a plugin hosted at GitHub.
-   *
-   * ## OPTIONS
-   *
-   * <command>
-   * : Only ```install``` is currently supported.
-   *
-   * <repository>
-   * : The repository to install. In the form ```account/repository```.
-   *
-   * [<tag>]
-   * : Optional release|tag|branch|commitish, defaults to master.
-   *
-   * [--token=<token>]
-   * : Optional GitHub token to authenticate access.
-   *
-   * ## EXAMPLES
-   *
-   *     wp github plugin install CherryFramework/cherry-plugin v1.2.8.1
-   *
-   * @synopsis <command> <repository> [<tag>] [--token=<token>]
-   */
-  function plugin($args, $assoc_args) {
-    self::apply('plugin', $args, $assoc_args);
-  }
-
-  /**
-   * Installs a plugin hosted at GitHub.
-   *
-   * ## OPTIONS
-   *
-   * <command>
-   * : Only ```install``` is currently supported.
-   *
-   * <repository>
-   * : The repository to install. In the form ```account/repository```.
-   *
-   * [<tag>]
-   * : Optional release|tag|branch|commitish, defaults to master.
-   *
-   * [--token=<token>]
-   * : Optional GitHub token to authenticate access.
-   *
-   * ## EXAMPLES
-   *
-   *     wp github theme install CherryFramework/CherryFramework v3.1.5
-   *
-   * @synopsis <command> <repository> [<tag>] [--token=<token>]
-   */
-  function theme( $args, $assoc_args ) {
-    self::apply('theme', $args, $assoc_args);
-  }
-}
-
-WP_CLI::add_command( 'github', 'GitHub_Command' );
-
-/**
- * Provides for installation of plugins and themes from Bitbucket.
- */
-class Bitbucket_Command extends SCM_Command {
-
-  const RE = <<<'ERE'
-/
-(?P<media>[^\/]+)
-\/
-(?:(?P<tree>.+)\.)?
-(?P<subtype>[^;+]+)
-(?:\+(?P<suffix>[^;]+))?
-(?P<parameters_scalar>
-  (?: #P<parameter>
-    ;[ ]
-    (?: #P<pname>
-      [^=]+)
-    (?:=(?: #P<pvalue>
-      [^;]*))?
-  )*
-)
-/x
-ERE;
-
-  const PRE = <<<'ERE'
-/
-;[ ]
-(?P<pname>[^=]+)
-(?:=(?P<pvalue>[^;]*))?
-/x
-ERE;
-
-
-  static protected function tgz($args, $assoc_args) {
-    list( $repo, $tag ) = $args;
-    $url = sprintf("https://bitbucket.org/%s/get/%s.tar.gz", $repo, $tag ?: 'master');
+  static protected function fetch_tarball_via_oauth($key, $secret, $uri) {
     try {
-      $oauth = new OAuth($assoc_args['key'], $assoc_args['secret']);
-      WP_CLI::log("Fetching $url");
-      $tgz = self::get($oauth, $url);
-      WP_CLI::log("Fetched $tgz");
-      WP_CLI::log("Converting $tgz to zip");
-      $zip = self::tgz_to_zip($repo, $tgz);
-      WP_CLI::log("Converted $tgz to $zip");
-      return array($url, $tgz, $zip);
+      $oauth = new OAuth($key, $secret);
+      $oauth->fetch($uri);
+
+      WP_CLI::debug($oauth->getLastResponseHeaders());
+
+      $headers = http_parse_headers($oauth->getLastResponseHeaders());
+
+      $mime_type = self::parse_content_type_header($headers['Content-Type']);
+
+      $content_disposition = self::parse_content_disposition_header($headers['Content-Disposition']);
+
+      $filename = empty($content_disposition['filename']) ? $filename = tmpfile() : sys_get_temp_dir() . DIRECTORY_SEPARATOR . $content_disposition['filename'];
+
+      file_put_contents($filename, $oauth->getLastResponse());
+
+      return $filename;
     } catch (OAuthException $e) {
       WP_CLI::error_multi_line($e->getMessage(), TRUE);
     }
@@ -227,89 +129,18 @@ ERE;
     return $mime_type;
   }
 
-  static protected function get($oauth, $uri) {
-    $oauth->fetch($uri);
+  static protected abstract function tgz($args, $assoc_args);
 
-    WP_CLI::debug($oauth->getLastResponseHeaders());
-
-    $headers = http_parse_headers($oauth->getLastResponseHeaders());
-
-    $mime_type = self::parse_content_type_header($headers['Content-Type']);
-
-    $content_disposition = self::parse_content_disposition_header($headers['Content-Disposition']);
-
-    $filename = empty($content_disposition['filename']) ? $filename = tmpfile() : sys_get_temp_dir() . DIRECTORY_SEPARATOR . $content_disposition['filename'];
-
-    file_put_contents($filename, $oauth->getLastResponse());
-
-    return $filename;
+  static protected function apply($cmd, $args, $assoc_args) {
+    $op = array_shift($args);
+    list($url, $tgz, $zip) = static::tgz($args, $assoc_args);
+    WP_CLI::log("Installing from $zip");
+    WP_CLI::run_command(array($cmd, $op, $zip), array('force' => 1));
+    WP_CLI::log("Removing $tgz, $zip");
+    unlink($tgz);
+    unlink($zip);
   }
-
-  /**
-   * Installs a plugin hosted at Bitbucket.
-   *
-   * ## OPTIONS
-   *
-   * <command>
-   * : Only ```install``` is currently supported.
-   *
-   * <repository>
-   * : The repository to install. In the form ```account/repository```.
-   *
-   * [<tag>]
-   * : Optional release|tag|branch|commitish, defaults to the latest
-   *   release, a tag, or master.
-   *
-   * --key=<key>
-   * : OAuth1.0a key to authenticate access.
-   *
-   * --secret=<secret>
-   * : OAuth1.0a secret to authenticate access.
-   *
-   * ## EXAMPLES
-   *
-   *     wp github plugin install CherryFramework/cherry-plugin v1.2.8.1 --key=<key> --secret=<secret>
-   *
-   * @synopsis <command> <repository> [<tag>] --key=<key> --secret=<secret>
-   */
-  function plugin($args, $assoc_args) {
-    self::apply('plugin', $args, $assoc_args);
-  }
-
-  /**
-   * Installs a theme hosted at Bitbucket.
-   *
-   * ## OPTIONS
-   *
-   * <command>
-   * : Only ```install``` is currently supported.
-   *
-   * <repository>
-   * : The repository to install. In the form ```account/repository```.
-   *
-   * [<tag>]
-   * : Optional release|tag|branch|commitish, defaults to the latest
-   *   release, a tag, or master.
-   *
-   * [--key=<key>]
-   * : Optional OAuth1.0a key to authenticate access.
-   *
-   * [--secret=<secret>]
-   * : Optional OAuth1.0a secret to authenticate access.
-   *
-   * ## EXAMPLES
-   *
-   *     wp github plugin install CherryFramework/cherry-plugin v1.2.8.1
-   *
-   * @synopsis <command> <repository> [<tag>] [--key=<key>] [--secret=<secret>]
-   */
-  function theme( $args, $assoc_args ) {
-    self::apply('theme', $args, $assoc_args);
-  }
-
 }
-
-WP_CLI::add_command( 'bitbucket', 'Bitbucket_Command' );
 
 if (!function_exists('http_parse_headers')) {
   function http_parse_headers($header) {

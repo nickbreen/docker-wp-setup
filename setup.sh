@@ -13,64 +13,6 @@ echo WP_NETWORK = ${WP_NETWORK:-no}
 echo WP_SUBDOMAINS = ${WP_SUBDOMAINS:-no}
 echo WP_URL = ${WP_URL:?WP_URL is required}
 
-# Installs a theme or plugin.
-#
-# Usage:
-#   install_a plugin plugin_slug|plugin_url
-#   install_a theme theme_slug1
-#   install_a theme http://theme_url2
-#
-function install_a {
-	wp $1 is-installed $2 || wp $1 install $2
-	wp $1 is-activated $2 || wp $1 $2 --activate
-}
-
-# Installs a theme or plugin hosted at BitBucket.
-# Usage:
-#   install_b plugin|theme REPO [TAG]
-#
-# REPO is the account/repository.
-# TAG is optionally any tag|branch|commitish
-#
-# Requires $BB_KEY and $BB_SECRET environment variables.
-#
-function install_b {
-	local URL="https://bitbucket.org/${2}/get/${3:-master}.tar.gz"
-	TGZ=$(php /usr/local/share/php/oauth.php -O -k "$BB_KEY" -s "$BB_SECRET" -- $URL)
-	install_tgz $1 $2 $TGZ
-}
-
-# Installs a theme or plugin hosted at GitHub.
-# Usage:
-#   install_g plugin|theme REPO [TAG]
-#
-# REPO is the account/repository.
-# TAG is optionally any release|tag|branch|commitish
-#
-# Will authenticate with GitHub if a GH_TOKEN environment variable exists.
-#
-function install_g {
-	# Get the tarball URL for the latest (or specified release)
-	local URL=$(curl -sfL ${GH_TOKEN:+-u $GH_TOKEN} "https://api.github.com/repos/${2}/releases/${3:-latest}" | jq -r '.tarball_url')
-	# If no releases are available fail-back to a commitish
-	: ${URL:=https://api.github.com/repos/${2}/tarball/${3:-master}}
-	TGZ=$(curl -sSfLJO ${GH_TOKEN:+-u $GH_TOKEN} -w '%{filename_effective}' $URL)
-	install_tgz $1 $2 $TGZ
-}
-
-# Extract the tarball and re-zip (store only) using the canonicalised name.
-# This assumes that the project name is the canonical name for the theme
-# or plugin! This may not actually be the case! If not then we'll need to
-# specify a SLUG.
-function install_tgz {
-	local TMP=$(mktemp -d)
-	mkdir -p $TMP/${2##*/}
-	tar xzf $3 --strip-components 1 -C $TMP/${2##*/} && rm $3
-	( cd $TMP; zip -0qrm ${2##*/}.zip ${2##*/} )
-	wp $1 install $TMP/${2##*/}.zip --force #--activate
-	rm -rf $TMP
-}
-
 function install_core {
 	# Download the lastest WP, preferebly with the selected locale, but fall back to the default locale.
 	wp core download ${WP_LOCALE:+--locale="$WP_LOCALE"} || wp core download || true
@@ -109,34 +51,16 @@ function install_core {
 			--skip-email
 }
 
-# Install themes or plugins from env vars
-# Usage:
-#    install_x theme|plugin VARS...
-#
-function install_x {
-	export -f install_{a,b,g,tgz}
-	for V in "${@:1}"
-	do
-		xargs -r -L 1 bash $X -e -c '"${@}"' _ install_$(echo ${V::1} | tr WGB agb) $1 <<< "${!V}"
-	done
-}
-
-# Sets options as specified in STDIN.
-# Expects format of OPTION_NAME JSON_STRING
-function wp_options {
-	[ -z "$WP_OPTIONS" ] || while read OPT VALUE
-	do
-		wp option set --format=json "$OPT" "$VALUE"
-	done <<< "$WP_OPTIONS"
-}
-
 # Allows execution of arbitrary WP-CLI commands.
 # I suppose this is either quite dangerous and makes most of
 # the rest of this script redundant.
 # Use this carefully as it, rather xargs, will process quotes.
 # If you command contains quotes they shall not pass! Without escaping that is.
 function wp_commands {
-	xargs -r -L 1 wp <<< "$WP_COMMANDS"
+	for V in ${!WP_COMMANDS*}
+	do
+		xargs -r -L 1 wp <<< "${!V}"
+	done
 }
 
 function import {
@@ -150,8 +74,5 @@ function import {
 # All rolled up into one function.
 function setup {
 	install_core
-	install_x theme {WP,GH,BB}_THEMES
-	install_x plugin {WP,GH,BB}_PLUGINS
-	wp_options
 	wp_commands
 }

@@ -24,7 +24,7 @@ ENV MYSQL_ROOT_PASSWORD="" \
     WP_EXTRA_PHP=""
 
 RUN mkdir -p /usr/local/share/php/
-COPY oauth.php php/* /usr/local/share/php/
+COPY php/* /usr/local/share/php/
 
 COPY setup.sh /etc/profile.d/
 
@@ -32,11 +32,13 @@ RUN for f in /usr/local/share/php/*.php; do php -l $f; done && bash -n /etc/prof
 
 RUN useradd -M -N -g www-data -d /var/www -s /bin/bash wp
 
-RUN mkdir -p /var/www/wp-content/uploads && \
-  chown -R wp:www-data /var/www && \
-  chmod -R g-w /var/www && \
-  chmod -R g+w /var/www/wp-content/uploads
+WORKDIR /var/www
+
+RUN mkdir -p wp-content/uploads && \
+  chown -R wp:www-data . && \
+  chmod -R g-w . && \
+  chmod -R g+w wp-content/uploads
+
+COPY wp-cli.yml /
 
 VOLUME /var/www /var/www/wp-content/uploads
-
-WORKDIR /var/www
