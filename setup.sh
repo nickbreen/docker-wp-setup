@@ -9,6 +9,9 @@ echo WP_DB_USER = ${WP_DB_USER:=$MYSQL_ENV_MYSQL_USER}
 echo WP_DB_PASSWORD = ${WP_DB_PASSWORD:=$MYSQL_ENV_MYSQL_PASSWORD}
 echo WP_DB_HOST = ${WP_DB_HOST:=$MYSQL_PORT_3306_TCP_ADDR}
 echo WP_DB_PORT = ${WP_DB_PORT:=${MYSQL_PORT_3306_TCP_PORT:-3306}}
+echo WP_NETWORK = ${WP_NETWORK:-no}
+echo WP_SUBDOMAINS = ${WP_SUBDOMAINS:-no}
+echo WP_URL = ${WP_URL:?WP_URL is required}
 
 # Installs a theme or plugin.
 #
@@ -18,7 +21,8 @@ echo WP_DB_PORT = ${WP_DB_PORT:=${MYSQL_PORT_3306_TCP_PORT:-3306}}
 #   install_a theme http://theme_url2
 #
 function install_a {
-	wp $1 is-installed $2 || wp $1 install $2 --activate
+	wp $1 is-installed $2 || wp $1 install $2
+	wp $1 is-activated $2 || wp $1 $2 --activate
 }
 
 # Installs a theme or plugin hosted at BitBucket.
@@ -63,7 +67,7 @@ function install_tgz {
 	mkdir -p $TMP/${2##*/}
 	tar xzf $3 --strip-components 1 -C $TMP/${2##*/} && rm $3
 	( cd $TMP; zip -0qrm ${2##*/}.zip ${2##*/} )
-	wp $1 install $TMP/${2##*/}.zip --force --activate
+	wp $1 install $TMP/${2##*/}.zip --force #--activate
 	rm -rf $TMP
 }
 
@@ -84,7 +88,6 @@ function install_core {
 	fi
 
 	# Configure the database
-	rm -f wp-config.php
 	wp core config \
 			${WP_LOCALE:+--locale="$WP_LOCALE"} \
 			--dbname="${WP_DB_NAME}" \
@@ -92,11 +95,13 @@ function install_core {
 			--dbpass="${WP_DB_PASSWORD}" \
 			--dbhost="${WP_DB_HOST}:${WP_DB_PORT}" \
 			${WP_DB_PREFIX:+--dbprefix="$WP_DB_PREFIX"} \
-			--extra-php <<< "${WP_EXTRA_PHP}"
+			--extra-php <<< "${WP_EXTRA_PHP}" \
+		|| true
 
 	# Configure the Blog
-	wp core is-installed || wp core install \
-			--url="${WP_URL:?WP_URL is required}" \
+	wp core is-installed || wp core ${WP_SUBDOMAINS:+multisite-}install \
+			--url="$WP_URL" \
+			${WP_SUBDOMAINS:+--subdomains} \
 			--title="$WP_TITLE" \
 			--admin_user="$WP_ADMIN_USER" \
 			--admin_password="$WP_ADMIN_PASSWORD" \

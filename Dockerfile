@@ -24,11 +24,11 @@ ENV MYSQL_ROOT_PASSWORD="" \
     WP_EXTRA_PHP=""
 
 RUN mkdir -p /usr/local/share/php/
-COPY oauth.php /usr/local/share/php/
+COPY oauth.php php/* /usr/local/share/php/
 
 COPY setup.sh /etc/profile.d/
 
-RUN php -l /usr/local/share/php/oauth.php && bash -n /etc/profile.d/setup.sh
+RUN for f in /usr/local/share/php/*.php; do php -l $f; done && bash -n /etc/profile.d/setup.sh
 
 RUN useradd -M -N -g www-data -d /var/www -s /bin/bash wp
 
@@ -40,6 +40,3 @@ RUN mkdir -p /var/www/wp-content/uploads && \
 VOLUME /var/www /var/www/wp-content/uploads
 
 WORKDIR /var/www
-
-# Actually don't do this, just run happily as a daemon,
-#CMD [ "/sbin/my_init", "--", "setuser", "wp", "bash", "-l", "-c", "setup" ]
