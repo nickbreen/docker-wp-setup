@@ -1,17 +1,15 @@
 #!/bin/bash
 
-X=$(shopt -qo xtrace && echo "-x")
-
 # Juggle ENV VARS
-echo MYSQL_ROOT_PASSWORD = ${MYSQL_ROOT_PASSWORD:=$MYSQL_ENV_MYSQL_ROOT_PASSWORD}
-echo WP_DB_NAME = ${WP_DB_NAME:=$MYSQL_ENV_MYSQL_DATABASE}
-echo WP_DB_USER = ${WP_DB_USER:=$MYSQL_ENV_MYSQL_USER}
-echo WP_DB_PASSWORD = ${WP_DB_PASSWORD:=$MYSQL_ENV_MYSQL_PASSWORD}
-echo WP_DB_HOST = ${WP_DB_HOST:=$MYSQL_PORT_3306_TCP_ADDR}
-echo WP_DB_PORT = ${WP_DB_PORT:=${MYSQL_PORT_3306_TCP_PORT:-3306}}
-echo WP_NETWORK = ${WP_NETWORK:-no}
-echo WP_SUBDOMAINS = ${WP_SUBDOMAINS:-no}
-echo WP_URL = ${WP_URL:?WP_URL is required}
+: ${MYSQL_ROOT_PASSWORD:=$MYSQL_ENV_MYSQL_ROOT_PASSWORD}
+: ${WP_DB_NAME:=$MYSQL_ENV_MYSQL_DATABASE}
+: ${WP_DB_USER:=$MYSQL_ENV_MYSQL_USER}
+: ${WP_DB_PASSWORD:=$MYSQL_ENV_MYSQL_PASSWORD}
+: ${WP_DB_HOST:=$MYSQL_PORT_3306_TCP_ADDR}
+: ${WP_DB_PORT:=${MYSQL_PORT_3306_TCP_PORT:-3306}}
+: ${WP_NETWORK:-no}
+: ${WP_SUBDOMAINS:-no}
+: ${WP_URL:?WP_URL is required}
 
 function install_core {
 	# Download the lastest WP, preferebly with the selected locale, but fall back to the default locale.
@@ -59,16 +57,8 @@ function install_core {
 function wp_commands {
 	for V in ${!WP_COMMANDS*}
 	do
-		xargs -r -L 1 wp <<< "${!V}"
+		sh <<< "${!V}"
 	done
-}
-
-function import {
-	wp plugin is-installed wordpress-importer || install_a plugin wordpress-importer
-	# wp option update siteurl "$WP_URL"
-	# wp option update home "$WP_URL"
-	echo 'Importing, this may take a *very* long time.'
-	wp import $WP_IMPORT --authors=create --skip=image_resize --quiet "$@"
 }
 
 # All rolled up into one function.

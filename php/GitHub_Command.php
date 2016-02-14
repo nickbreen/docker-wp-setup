@@ -5,10 +5,10 @@
 class GitHub_Command extends SCM_Command {
 
   static protected function tgz($args, $assoc_args) {
-    list( $repo, $tag ) = $args;
+    @list( $repo, $tag ) = $args;
     // Get the tarball URL for the latest (or specified release)
     $url = sprintf("https://api.github.com/repos/%s/releases/%s", $repo, $tag ? "tags/${tag}" : 'latest');
-    WP_CLI::log("Querying for releases: $url");
+    WP_CLI::debug("Querying for releases: $url");
     $url = self::tarball_url($url, @$assoc_args['token']);
 
     // If no releases are available fail-back to a commitish
@@ -17,13 +17,13 @@ class GitHub_Command extends SCM_Command {
     else
       $url = sprintf("https://api.github.com/repos/%s/tarball/%s", $repo, $tag ?: 'master');
 
-    WP_CLI::log("Fetching $url");
+    WP_CLI::debug("Fetching $url");
     $tgz = self::fetch_tarball($url, @$assoc_args['token']);
-    WP_CLI::log("Fetched $tgz");
+    WP_CLI::debug("Fetched $tgz");
 
-    WP_CLI::log("Converting $tgz to zip");
+    WP_CLI::debug("Converting $tgz to zip");
     $zip = self::tgz_to_zip($repo, $tgz);
-    WP_CLI::log("Converted $tgz to $zip");
+    WP_CLI::debug("Converted $tgz to $zip");
 
     return array($url, $tgz, $zip);
   }

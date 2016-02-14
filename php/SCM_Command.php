@@ -73,14 +73,14 @@ ERE;
     if ($auth)
       $auth = "-u ${auth}";
     // TODO pure PHP
-    return trim(shell_exec("curl -sSfL ${auth} ${url} | jq -r '.tarball_url'"));
+    return trim(shell_exec("curl -sfL ${auth} ${url} | jq -r '.tarball_url'"));
   }
 
   static protected function fetch_tarball($url, $auth = NULL) {
     if ($auth)
       $auth = "-u ${auth}";
     // TODO pure PHP
-    return shell_exec("echo -n $(readlink -n -f .)/; curl -sSfLJO -w '%{filename_effective}' ${auth} ${url}");
+    return shell_exec("echo -n $(readlink -n -f .)/; curl -sfLJO -w '%{filename_effective}' ${auth} ${url}");
   }
 
   static protected function fetch_tarball_via_oauth($key, $secret, $uri) {
@@ -134,34 +134,34 @@ ERE;
   static protected function apply($cmd, $args, $assoc_args) {
     $op = array_shift($args);
     list($url, $tgz, $zip) = static::tgz($args, $assoc_args);
-    WP_CLI::log("Installing from $zip");
+    WP_CLI::debug("Installing from $zip");
     WP_CLI::run_command(array($cmd, $op, $zip), array('force' => 1));
-    WP_CLI::log("Removing $tgz, $zip");
+    WP_CLI::debug("Removing $tgz, $zip");
     unlink($tgz);
     unlink($zip);
   }
 }
 
 if (!function_exists('http_parse_headers')) {
-  function http_parse_headers($header) {
-      $retVal = array();
-      $fields = explode("\r\n", preg_replace('/\x0D\x0A[\x09\x20]+/', ' ', $header));
+  function http_parse_headers($headers_raw) {
+      $headers = array();
+      $fields = explode("\r\n", preg_replace('/\x0D\x0A[\x09\x20]+/', ' ', $headers_raw));
       foreach( $fields as $field ) {
           if( preg_match('/([^:]+): (.+)/m', $field, $match) ) {
               $match[1] = preg_replace_callback('/(?<=^|[\x09\x20\x2D])./', function ($x) { return strtoupper($x[0]); }, strtolower(trim($match[1])));
-              if( isset($retVal[$match[1]]) ) {
-                  if ( is_array( $retVal[$match[1]] ) ) {
-                      $i = count($retVal[$match[1]]);
-                      $retVal[$match[1]][$i] = $match[2];
+              if( isset($headers[$match[1]]) ) {
+                  if ( is_array( $headers[$match[1]] ) ) {
+                      $i = count($headers[$match[1]]);
+                      $headers[$match[1]][$i] = $match[2];
                   }
                   else {
-                      $retVal[$match[1]] = array($retVal[$match[1]], $match[2]);
+                      $headers[$match[1]] = array($headers[$match[1]], $match[2]);
                   }
               } else {
-                  $retVal[$match[1]] = trim($match[2]);
+                  $headers[$match[1]] = trim($match[2]);
               }
           }
       }
-      return $retVal;
+      return $headers;
   }
 }
