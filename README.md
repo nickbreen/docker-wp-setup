@@ -9,22 +9,8 @@ Volumes for the docroot and wp-content/uploads directories are configured.
 To automatically setup WP use two containers:
 
     # docker-compose.yml
-    # This one runs the cron service and contains the 'data' volumes
-    wp-cli:
-      image: nickbreen/wp-cli
-
-    # This one runs the setup script and then terminates.
     wp-setup:
       image: nickbreen/wp-setup
-      command: |-
-        . /setup.sh
-        install_core
-        install_themes
-        install_plugins
-        wp_options
-        wp_commands
-      volumes_from:
-        - wp-cli
       environment:
         # yadda, see below
 
