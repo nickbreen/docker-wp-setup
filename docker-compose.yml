@@ -18,10 +18,10 @@ wp-setup:
     CRON_D_WP: |-
       PATH=/usr/local/bin:$$PATH
       * * * * * wp wp cron event list --format=csv --fields=hook,next_run_relative --path=/var/www | awk -F ',' '$$2 == "now" {print $$1}' | xargs -r -l1 wp cron event run --path=/var/www
-    WP_URL: http://wp.dev
+    WP_URL: http://localhost
     WP_ADMIN_USER: admin
     WP_ADMIN_PASSWORD: admin
-    WP_ADMIN_EMAIL: admin@wp.dev
+    WP_ADMIN_EMAIL: admin@localhost
     WP_PLUGINS: |-
       rest-api
     GH_PLUGINS: |-
@@ -36,4 +36,4 @@ wp:
   links:
     - db:mysql
   ports:
-    - 81:8080
+    - 80:8080
