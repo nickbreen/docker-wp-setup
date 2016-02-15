@@ -1,8 +1,9 @@
-FROM nickbreen/wp-cli
+FROM nickbreen/wp-cli:v1.0.0
 
 MAINTAINER Nick Breen <nick@foobar.net.nz>
 
-ENV MYSQL_ROOT_PASSWORD="" \
+ENV WP_DB_ROOT_USER="root" \
+    WP_DB_ROOT_PASSWORD="" \
     WP_LOCALE="" \
     WP_DB_HOST="" \
     WP_DB_PORT="" \
@@ -10,17 +11,12 @@ ENV MYSQL_ROOT_PASSWORD="" \
     WP_DB_USER="" \
     WP_DB_PASSWORD="" \
     WP_DB_PREFIX="" \
+    WP_SUBDOMAINS="" \
     WP_URL="" \
     WP_TITLE="" \
     WP_ADMIN_USER="" \
     WP_ADMIN_PASSWORD="" \
     WP_ADMIN_EMAIL="" \
-    WP_THEMES="" \
-    BB_THEMES="" \
-    WP_PLUGINS="" \
-    BB_PLUGINS="" \
-    WP_OPTIONS="" \
-    WP_IMPORT="" \
     WP_EXTRA_PHP=""
 
 RUN mkdir -p /usr/local/share/php/
