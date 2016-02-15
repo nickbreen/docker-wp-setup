@@ -40,6 +40,3 @@ RUN mkdir -p /var/www/wp-content/uploads && \
 VOLUME /var/www /var/www/wp-content/uploads
 
 WORKDIR /var/www
-
-# Actually don't do this, just run happily as a daemon,
-#CMD [ "/sbin/my_init", "--", "setuser", "wp", "bash", "-l", "-c", "setup" ]
