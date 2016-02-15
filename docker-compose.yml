@@ -29,16 +29,6 @@ wp-setup:
       WP-API/Basic-Auth
     GH_THEMES: |-
       CherryFramework/CherryFramework
-    BB_KEY: qAMQvMs9L7ktMxNZwE
-    BB_SECRET: pUnHEE9gAQvExenRwTC67a5vAyXLnfy6
-    BB_PLUGINS: |-
-      nickbreen/kidslink-plugin v1.5.7
-    BB_THEMES: |-
-      nickbreen/kidslink-theme v1.5.6
-    WP_EXTRA_PHP: |-
-      define('DISABLE_WP_CRON', true);
-    WP_OPTIONS: |-
-      foo {"foo":"FOO","bar":"BAR"}
 
 wp:
   build: .
