@@ -4,17 +4,15 @@ WordPress is set up with a non-root user.
 
 Volumes for the docroot and wp-content/uploads directories are configured.
 
+The installation is hardcoded to `/var/www`.
+
 # Usage
 
-To automatically setup WP use two containers:
+See `docker-compose.yml` for a usage example.
 
-    # docker-compose.yml
-    setup:
-      image: nickbreen/wp-setup
-      environment:
-        # yadda, see below
+`attach` or `exec` (etc) into the container and execute `setup`.
 
-The installation is hardcoded to `/var/www`.
+This image provides and uses [WP-CLI].
 
 # Configuration
 
@@ -101,6 +99,7 @@ tokens for private repositories); e.g.:
 For both GitHub and Bitbucket the version/release tag is optional and defaults
 to the `latest` release, or if no releases exist, to `master`.
 
+[WP-CLI]: http://wp-cli.org
 [Bitbucket]: https://bitbucket.com
 [GitHub]: https://github.com
 [WordPress]: https://wordpress.org
