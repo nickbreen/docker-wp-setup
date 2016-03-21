@@ -25,34 +25,23 @@ setup:
   volumes_from:
     - wp
   environment:
+    WP_LOCALE: en_NZ
+    WP_VERSION: 4.4.2
     WP_TITLE: Main
     WP_SUBDOMAINS: "yes"
     WP_URL: http://main.dev
     WP_ADMIN_USER: admin
     WP_ADMIN_PASSWORD: admin
-    WP_ADMIN_EMAIL: webmaster+admin@foobar.net.nz
+    WP_ADMIN_EMAIL: admin@main.dev
     WP_EXTRA_PHP: |
       define('DISABLE_WP_CRON', TRUE);
-      @define('COOKIE_DOMAIN', $$_SERVER[ 'HTTP_HOST' ]);
+    WP_COMMANDS_0: |
+      wp --url=http://main.dev theme activate twentyfifteen
     WP_COMMANDS_1: |
-      set -x
-      ID=$$(wp site list --fields=blog_id --domain=site1.dev | sed 1d)
-      if [ ! $$ID ]
-      then
-        ID=$$(wp site create --slug=site1 --title="Site 1" --porcelain)
-        wp db query "UPDATE wp_blogs SET domain = 'site1.dev' WHERE blog_id = $$ID"
-      fi
-      wp --url=http://site1.dev option update siteurl http://site1.dev
-      wp --url=http://site1.dev option update home http://site1.dev
-      wp site list
+      new_site sitea sitea.dev http://sitea.dev "Site A"
+      wp --url=http://sitea.dev theme activate twentyfourteen
     WP_COMMANDS_2: |
-      set -x
-      ID=$$(wp site list --fields=blog_id --domain=site2.dev | sed 1d)
-      if [ ! $$ID ]
-      then
-        ID=$$(wp site create --slug=site2 --title="Site 2" --porcelain)
-        wp db query "UPDATE wp_blogs SET domain = 'site2.dev' WHERE blog_id = $$ID"
-      fi
-      wp --url=http://site2.dev option update siteurl http://site2.dev
-      wp --url=http://site2.dev option update home http://site2.dev
+      new_site siteb siteb.dev http://siteb.dev "Site B"
+      wp --url=http://sitea.dev theme activate twentythirteen
+    WP_COMMANDS_END: |
       wp site list
