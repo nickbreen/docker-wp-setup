@@ -6,30 +6,6 @@ db:
     MYSQL_USER: wordpress
     MYSQL_PASSWORD: wordpress
 
-wp-setup:
-  build: .
-  links:
-    - db:mysql
-  volumes_from:
-    - wp
-  environment:
-    WP_EXTRA_PHP: |-
-      define('DISABLE_WP_CRON', true);
-    CRON_D_WP: |-
-      PATH=/usr/local/bin:$$PATH
-      * * * * * wp wp cron event list --format=csv --fields=hook,next_run_relative --path=/var/www | awk -F ',' '$$2 == "now" {print $$1}' | xargs -r -l1 wp cron event run --path=/var/www
-    WP_URL: http://localhost
-    WP_ADMIN_USER: admin
-    WP_ADMIN_PASSWORD: admin
-    WP_ADMIN_EMAIL: admin@localhost
-    WP_PLUGINS: |-
-      rest-api
-    GH_PLUGINS: |-
-      WP-API/OAuth1
-      WP-API/Basic-Auth
-    GH_THEMES: |-
-      CherryFramework/CherryFramework
-
 wp:
   build: .
   command: [ "/sbin/my_init", "--", "setuser", "wp", "bash", "-l", "-c", "while ! wp server --host=0.0.0.0 --docroot=/var/www; do sleep 5; done" ]
@@ -37,3 +13,35 @@ wp:
     - db:mysql
   ports:
     - 80:8080
+  environment:
+    CRON_D_WP: |
+      PATH=/usr/local/bin:$$PATH
+      * * * * * wp wp cron event list --format=csv --fields=hook,next_run_relative | awk -F ',' '$$2 == "now" {print $$1}' | xargs -r -l1 wp cron event run
+
+setup:
+  build: .
+  links:
+    - db:mysql
+  volumes_from:
+    - wp
+  environment:
+    WP_LOCALE: en_NZ
+    WP_VERSION: 4.4.2
+    WP_TITLE: Main
+    WP_SUBDOMAINS: "yes"
+    WP_URL: http://main.dev
+    WP_ADMIN_USER: admin
+    WP_ADMIN_PASSWORD: admin
+    WP_ADMIN_EMAIL: admin@main.dev
+    WP_EXTRA_PHP: |
+      define('DISABLE_WP_CRON', TRUE);
+    WP_COMMANDS_0: |
+      wp --url=http://main.dev theme activate twentyfifteen
+    WP_COMMANDS_1: |
+      new_site sitea sitea.dev http://sitea.dev "Site A"
+      wp --url=http://sitea.dev theme activate twentyfourteen
+    WP_COMMANDS_2: |
+      new_site siteb siteb.dev http://siteb.dev "Site B"
+      wp --url=http://sitea.dev theme activate twentythirteen
+    WP_COMMANDS_END: |
+      wp site list

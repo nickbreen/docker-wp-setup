@@ -1,101 +1,122 @@
-Automated set up utilities for WordPress.
+Automated set up utilities for [WordPress].
 
 WordPress is set up with a non-root user.
 
 Volumes for the docroot and wp-content/uploads directories are configured.
 
+The installation is hardcoded to `/var/www`.
+
 # Usage
 
-To automatically setup WP use two containers:
+See `docker-compose.yml` for a usage example.
 
-    # docker-compose.yml
-    wp-setup:
-      image: nickbreen/wp-setup
-      environment:
-        # yadda, see below
+`attach` or `exec` (etc) into the container and execute `setup`.
 
-# Configuration
+    docker exec -itu wp CONTAINER bash -l -c 'setup'
 
-The database configuration can be specified explicitly with:
+This image provides and uses [WP-CLI].
 
-- ```WP_DB_HOST```
-- ```WP_DB_PORT```
-- ```WP_DB_NAME```
-- ```WP_DB_USER```
-- ```WP_DB_PASSWORD```
-- ```WP_DB_PREFIX```
+## Download
 
-If any are omitted then values are inferred from the linked ```:mysql``` container, otherwise sensible defaults are used.
+The version and a locale can be specified with environment variables.
 
-Variable             | Value inferred from            | Default
--------------------- | ------------------------------ | ---------
-```WP_DB_NAME```     | ```MYSQL_ENV_MYSQL_DATABASE``` | wordpress
-```WP_DB_USER```     | ```MYSQL_ENV_MYSQL_USER```     | wordpress
-```WP_DB_PASSWORD``` | ```MYSQL_ENV_MYSQL_PASSWORD``` | wordpress
-```WP_DB_HOST```     | ```MYSQL_PORT_3306_TCP_ADDR``` | mysql
-```WP_DB_PORT```     | ```MYSQL_PORT_3306_TCP_PORT``` | 3306
-```WP_DB_PREFIX```   | N/A                            | wp_
+| Variable   | Example | Default
+|------------|---------|---------
+| WP_VERSION | 4.4.2   | Latest
+| WP_LOCALE  | en_NZ   | en_US
 
-```--extra-php``` is supported with the ```WP_EXTRA_PHP``` environment variable. E.g.
+## Configuration
+
+The database configuration can be specified explicitly with environment variables.
+
+If any are omitted then values are inferred from the linked ```:mysql```
+container, otherwise sensible defaults are used.
+
+| Variable       | Value inferred from      | Default
+|----------------| -------------------------| ---------
+| WP_DB_NAME     | MYSQL_ENV_MYSQL_DATABASE | wordpress
+| WP_DB_USER     | MYSQL_ENV_MYSQL_USER     | wordpress
+| WP_DB_PASSWORD | MYSQL_ENV_MYSQL_PASSWORD | wordpress
+| WP_DB_HOST     | MYSQL_PORT_3306_TCP_ADDR | mysql
+| WP_DB_PORT     | MYSQL_PORT_3306_TCP_PORT | 3306
+| WP_DB_PREFIX   | N/A                      | wp_
+
+`--extra-php` is supported with the `WP_EXTRA_PHP` environment variable. E.g.
 
     WP_EXTRA_PHP: |
       define('DISABLE_WP_CRON', true);
 
 ## Installation
 
-The initial DB is installed, if not already installed in the DB, using the variables; each has a useless default value, so make sure you set them:
-- ```WP_LOCALE``` (default ```en_NZ```)
-- ```WP_URL```
-- ```WP_TITLE```
-- ```WP_ADMIN_USER```
-- ```WP_ADMIN_PASSWORD```
-- ```WP_ADMIN_EMAIL```
+The initial DB is installed, if not already installed in the DB, using the
+following variables; the setup script will complain if any are unset.
+
+| Variable          | Example             | Default
+|-------------------|---------------------|---------
+| WP_LOCALE         | en_NZ               | en_US
+| WP_URL            | http://example.com  |
+| WP_TITLE          | Example Title       |
+| WP_ADMIN_EMAIL    | admin@example.com   |
+| WP_ADMIN_USER     | admin               |
+| WP_ADMIN_PASSWORD |                     |
+
+## Multisite
+
+Multisite is supported, it is enabled when the `WP_SUBDOMAINS` environment
+variable is set.
+
+| Variable      | Example
+|---------------|---------
+| WP_SUBDOMAINS | "yes"  
+
+Path-based multisites are not supported.
+
+A domain mapping plugin is not required. Use the convenience function to  
+register a new site.
+
+    WP_COMMANDS: |
+      new_site sitea sitea.dev http://sitea.dev "Site A"
+      wp --url=http://sitea.dev theme activate twentyfourteen
 
 ## Themes and Plugins
 
-Themes and plugins can be installed from the WordPress.org repository, from a URL to the theme's or plugin's ZIP file. I.e.:
-
-Each theme or plugin is on its own line.
-
-    WP_THEMES: |
-      theme-slug
-      http://theme.domain/theme-url.zip
-
-    WP_PLUGINS: |
-      plugin-slug
-      https://plugin.domain/plugin-url.zip
-
-Themes and plugins can also be installed from [Bitbucket] (OAuth 1.0a supported for private repositories) and [GitHub] (HTTP Basic Auth using personal access tokens for private repositories):
-
-      BB_KEY: "BitBucket API OAuth Key"
-      BB_SECRET: "BitBucket API OAuth Secret"
-      BB_PLUGINS: |
-        account/repo [tag]
-      BB_THEMES: |
-        account/repo [tag]
-      GH_TOKEN: username:token
-      GH_THEME: |
-        CherryFramework/CherryFramework
-
-[Bitbucket]: https://bitbucket.com "Bitbucket"
-[GitHub]: https://github.com "GitHub"
-
-## Options
-
-Any WordPress options can be set as JSON using ```WP_OPTIONS```. E.g.
-
-    WP_OPTIONS: |
-      timezone_string "Pacific/Auckland"
-      some_complex_option {"access_key_id":"...","secret_access_key":"..."}
-
-Simple strings must be quoted.
-
-To set non-JSON options, use ```WP_COMMANDS```.
-
-## Arbitrary WP-CLI Commands
-
-Any WP-CLI command can be executed; e.g.:
+Themes and plugins can be installed from the WordPress.org repository, from a
+URL to the theme's or plugin's ZIP file using `WP_COMMANDS`; e.g.:
 
     WP_COMMANDS: |
-      rewrite structure /%postname%
-      rewrite flush
+      wp theme install theme-slug --version=1.2.3
+      wp theme install http://example.com/theme.zip --activate
+      wp plugin install plugin-slug --version=1.2.3
+      wp plugin install https://example.com/plugin.zip
+
+Themes and plugins can also be installed from [Bitbucket] (OAuth 1.0a supported
+for private repositories) and [GitHub] (HTTP Basic Auth using personal access
+tokens for private repositories); e.g.:
+
+    WP_COMMANDS: |
+      wp github theme install CherryFramework/CherryFramework v3.1.5
+      wp github theme install CherryFramework/CherryFramework v3.1.5 --token=XXX
+      wp bitbucket plugin install CherryFramework/cherry-plugin v3.1.5
+      wp bitbucket plugin install CherryFramework/cherry-plugin v3.1.5 --key=XXX --secret=XXX
+
+For both GitHub and Bitbucket the version/release tag is optional and defaults
+to the `latest` release, or if no releases exist, to `master`.
+
+[WP-CLI]: http://wp-cli.org
+[Bitbucket]: https://bitbucket.com
+[GitHub]: https://github.com
+[WordPress]: https://wordpress.org
+
+## Arbitrary Commands
+
+Any arbitrary commands can be executed, actually any commands as the
+value is processed by `sh`. Any environment variable prefixed with `WP_COMMANDS`
+will be processed.
+
+    WP_COMMANDS_0: | # Install plugins
+      wp plugin install jetpack --activate
+    WP_COMMANDS_1: | # Configure themes
+      wp theme activate twentyfourteen
+    WP_COMMANDS_2: | # Set some options
+      wp rewrite structure /%postname%
+      wp rewrite flush
