@@ -32,14 +32,18 @@ The database configuration can be specified explicitly with environment variable
 If any are omitted then values are inferred from the linked ```:mysql```
 container, otherwise sensible defaults are used.
 
-| Variable       | Value inferred from      | Default
-|----------------| -------------------------| ---------
-| WP_DB_NAME     | MYSQL_ENV_MYSQL_DATABASE | wordpress
-| WP_DB_USER     | MYSQL_ENV_MYSQL_USER     | wordpress
-| WP_DB_PASSWORD | MYSQL_ENV_MYSQL_PASSWORD | wordpress
-| WP_DB_HOST     | MYSQL_PORT_3306_TCP_ADDR | mysql
-| WP_DB_PORT     | MYSQL_PORT_3306_TCP_PORT | 3306
-| WP_DB_PREFIX   | N/A                      | wp_
+| Variable            | Value inferred from           | Default
+|---------------------|-------------------------------|---------
+| WP_DB_NAME          | MYSQL_ENV_MYSQL_DATABASE      |
+| WP_DB_USER          | MYSQL_ENV_MYSQL_USER          |
+| WP_DB_PASSWORD      | MYSQL_ENV_MYSQL_PASSWORD      |
+| WP_DB_HOST          | MYSQL_PORT_3306_TCP_ADDR      | mysql
+| WP_DB_PORT          | MYSQL_PORT_3306_TCP_PORT      | 3306
+| WP_DB_PREFIX        | N/A                           |
+| WP_DB_ROOT_USER     | N/A                           | root
+| WP_DB_ROOT_PASSWORD | MYSQL_ENV_MYSQL_ROOT_PASSWORD |
+
+The DB root user will be used to create the WP DB and user if they do not already exist.
 
 `--extra-php` is supported with the `WP_EXTRA_PHP` environment variable. E.g.
 
@@ -69,14 +73,17 @@ variable is set.
 |---------------|---------
 | WP_SUBDOMAINS | "yes"  
 
-Path-based multisites are not supported.
+Path-based multisite setups are not supported.
 
-A domain mapping plugin is not required. Use the convenience function to  
-register a new site.
+A domain mapping plugin is not required, though there is no UI to conveniently administer site domains.
+
+Use the convenience function to register a new site. It will configure all domain mapping values.
 
     WP_COMMANDS: |
       new_site sitea sitea.dev http://sitea.dev "Site A"
       wp --url=http://sitea.dev theme activate twentyfourteen
+
+Cookies are configured to be issued for only the site's domain. Cookies are shared between www.example.com and example.com.
 
 ## Themes and Plugins
 
