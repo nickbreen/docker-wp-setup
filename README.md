@@ -59,7 +59,7 @@ following variables; the setup script will complain if any are unset.
 |-------------------|---------------------|---------
 | WP_LOCALE         | en_NZ               | en_US
 | WP_URL            | http://example.com  |
-| WP_TITLE          | Example Title       |
+| WP_TITLE          | Example Site        |
 | WP_ADMIN_EMAIL    | admin@example.com   |
 | WP_ADMIN_USER     | admin               |
 | WP_ADMIN_PASSWORD |                     |
@@ -80,8 +80,8 @@ A domain mapping plugin is not required, though there is no UI to conveniently a
 Use the convenience function to register a new site. It will configure all domain mapping values.
 
     WP_COMMANDS: |
-      new_site sitea sitea.dev http://sitea.dev "Site A"
-      wp --url=http://sitea.dev theme activate twentyfourteen
+      new_site example example.com http://example.com "Example Site"
+      wp --url=http://example.com theme activate twentyfourteen
 
 Cookies are configured to be issued for only the site's domain. Cookies are shared between www.example.com and example.com.
 
@@ -111,8 +111,7 @@ to the `latest` release, or if no releases exist, to `master`.
 
 ## Arbitrary Commands
 
-Any arbitrary commands can be executed, actually any commands as the
-value is processed by `sh`. Any environment variable prefixed with `WP_COMMANDS`
+Arbitrary commands can be executed. Any environment variable prefixed with `WP_COMMANDS`
 will be processed.
 
     WP_COMMANDS_0: | # Install plugins
@@ -122,6 +121,8 @@ will be processed.
     WP_COMMANDS_2: | # Set some options
       wp rewrite structure /%postname%
       wp rewrite flush
+
+Take care with this as the values are processed by `eval` in Bash.
 
 [WP-CLI]: http://wp-cli.org
 [Bitbucket]: https://bitbucket.com
