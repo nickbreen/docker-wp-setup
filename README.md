@@ -109,11 +109,6 @@ tokens for private repositories); e.g.:
 For both GitHub and Bitbucket the version/release tag is optional and defaults
 to the `latest` release, or if no releases exist, to `master`.
 
-[WP-CLI]: http://wp-cli.org
-[Bitbucket]: https://bitbucket.com
-[GitHub]: https://github.com
-[WordPress]: https://wordpress.org
-
 ## Arbitrary Commands
 
 Any arbitrary commands can be executed, actually any commands as the
@@ -127,3 +122,8 @@ will be processed.
     WP_COMMANDS_2: | # Set some options
       wp rewrite structure /%postname%
       wp rewrite flush
+
+[WP-CLI]: http://wp-cli.org
+[Bitbucket]: https://bitbucket.com
+[GitHub]: https://github.com
+[WordPress]: https://wordpress.org
