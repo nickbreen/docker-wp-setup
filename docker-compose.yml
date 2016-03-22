@@ -6,9 +6,11 @@ db:
     MYSQL_USER: wordpress
     MYSQL_PASSWORD: wordpress
 
-wp:
+www:
   build: .
   command: [ "/sbin/my_init", "--", "setuser", "wp", "bash", "-l", "-c", "while ! wp server --host=0.0.0.0 --docroot=/var/www; do sleep 5; done" ]
+  volumes_from:
+    - wp
   links:
     - db:mysql
   ports:
@@ -18,30 +20,47 @@ wp:
       PATH=/usr/local/bin:$$PATH
       * * * * * wp wp cron event list --format=csv --fields=hook,next_run_relative | awk -F ',' '$$2 == "now" {print $$1}' | xargs -r -l1 wp cron event run
 
-setup:
+wp:
   build: .
   links:
     - db:mysql
-  volumes_from:
-    - wp
   environment:
     WP_LOCALE: en_NZ
     WP_VERSION: 4.4.2
     WP_TITLE: Main
     WP_SUBDOMAINS: "yes"
-    WP_URL: http://main.dev
+    WP_URL: http://main.dev:8080
     WP_ADMIN_USER: admin
     WP_ADMIN_PASSWORD: admin
     WP_ADMIN_EMAIL: admin@main.dev
     WP_EXTRA_PHP: |
       define('DISABLE_WP_CRON', TRUE);
     WP_COMMANDS_0: |
-      wp --url=http://main.dev theme activate twentyfifteen
+      set -e
+      wp github plugin install fake-repo/fake-plugin v1.4.9
+      wp bitbucket plugin install fake-repo/fake-plugin v1.4.9
+      wp bitbucket plugin install paultela/wordpress-new-relic-app-name
+      wp bitbucket theme install mwins/wordpress-theme-basic
+      # Expect a `Warning: The package could not be installed. The <code>style.css</code> stylesheet doesn&#8217;t contain a valid theme header.`
+      # for the above theme.
+      wp github theme install CherryFramework/CherryFramework v3.1.5
+      wp github plugin install CherryFramework/cherry-plugin v1.2.8.1
     WP_COMMANDS_1: |
-      new_site sitea sitea.dev http://sitea.dev "Site A"
-      wp --url=http://sitea.dev theme activate twentyfourteen
+      SLUG=site14
+      DOMAIN=dev
+      HOST=$$SLUG.$$DOMAIN:8080
+      URL=https://$$HOST
+      new_site $$SLUG $$HOST $$URL "Site 14"
+      wp --url=$$URL theme activate twentyfourteen
     WP_COMMANDS_2: |
-      new_site siteb siteb.dev http://siteb.dev "Site B"
-      wp --url=http://sitea.dev theme activate twentythirteen
+      SLUG=site15
+      DOMAIN=dev
+      HOST=$$SLUG.$$DOMAIN:8080
+      URL=https://$$HOST
+      new_site $$SLUG $$HOST $$URL "Site 15"
+      wp --url=$$URL theme activate twentyfifteen
     WP_COMMANDS_END: |
+      export TERM=dumb
       wp site list
+      wp theme list
+      wp plugin list
