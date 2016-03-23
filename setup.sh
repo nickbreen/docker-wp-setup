@@ -1,9 +1,6 @@
 #!/bin/bash
 
-function install_core {
-	# Download the lastest WP, preferebly with the selected locale, but fall back to the default locale.
-	wp core download ${WP_LOCALE:+--locale="$WP_LOCALE"} ${WP_VERSION:+--version="$WP_VERSION"} || wp core download || true
-
+function setup_db {
 	local V=$(shopt -qo xtrace && echo "-vvv")
 	# Setup the database if required.
 	local SQL="CREATE DATABASE IF NOT EXISTS $WP_DB_NAME; CREATE USER '$WP_DB_USER' IDENTIFIED BY '$WP_DB_PASSWORD'; GRANT ALL PRIVILEGES ON $WP_DB_NAME.* TO '$WP_DB_USER';	FLUSH PRIVILEGES; SHOW GRANTS FOR \"$WP_DB_USER\""
@@ -15,6 +12,11 @@ function install_core {
 		echo Set up the DB $WP_DB_NAME and USER $WP_DB_USER.
 		while ! mysql $V -h$WP_DB_HOST -P$WP_DB_PORT -u$WP_DB_ROOT_USER -p$WP_DB_ROOT_PASSWORD -e "$SQL"; do sleep 5; done
 	fi
+}
+
+function install_core {
+	# Download the lastest WP, preferebly with the selected locale, but fall back to the default locale.
+	wp core download ${WP_LOCALE:+--locale="$WP_LOCALE"} ${WP_VERSION:+--version="$WP_VERSION"} || wp core download ${WP_VERSION:+--version="$WP_VERSION"} || true
 
 	if [ $WP_SUBDOMAINS ]
 	then
@@ -43,7 +45,7 @@ function install_core {
 		|| true
 
 	# Configure the Blog
-	wp --url="$WP_URL" core is-installed || wp core ${WP_SUBDOMAINS:+multisite-}install \
+	wp core is-installed || wp core ${WP_SUBDOMAINS:+multisite-}install \
 			--url="$WP_URL" \
 			${WP_SUBDOMAINS:+--subdomains} \
 			--title="$WP_TITLE" \
@@ -76,13 +78,25 @@ function wp_commands {
 	done
 }
 
+# Allows execution of arbitrary WP-CLI commands.
+# I suppose this is either quite dangerous and makes most of
+# the rest of this script redundant.
+function wp_sites {
+	for V in ${!WP_SITE*}
+	do
+		eval "${!V}"
+	done
+}
+
 # All rolled up into one function.
 function setup {
+	setup_db
 	install_core
 	wp_commands
 }
 
 # Juggle ENV VARS
+# TODO update these to support docker-compose version 2 (i.e. no env vars copied)
 : ${WP_DB_ROOT_USER:=root}
 : ${WP_DB_ROOT_PASSWORD:=$MYSQL_ENV_MYSQL_ROOT_PASSWORD}
 : ${WP_DB_NAME:=$MYSQL_ENV_MYSQL_DATABASE}
