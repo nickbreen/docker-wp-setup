@@ -64,3 +64,4 @@ wp:
       wp site list
       wp theme list
       wp plugin list
+      wp --version
