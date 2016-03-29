@@ -10,9 +10,9 @@ The installation is hardcoded to `/var/www`.
 
 See `docker-compose.yml` for a usage example.
 
-`attach` or `exec` (etc) into the container and execute `setup`.
+`attach` or `exec` (etc) into the container and execute `wp-setup; wp-sites`.
 
-    docker exec -itu wp CONTAINER bash -l -c 'setup'
+    docker exec -itu wp CONTAINER bash -l -c 'wp-setup; wp-sites'
 
 This image provides and uses [WP-CLI].
 
@@ -79,8 +79,12 @@ A domain mapping plugin is not required, though there is no UI to conveniently a
 
 Use the convenience function to register a new site. It will configure all domain mapping values.
 
+    wp-site-create <SLUG> <DOMAIN> <URL> <TITLE>
+
+E.g.
+
     WP_COMMANDS: |
-      new_site example example.com http://example.com "Example Site"
+      wp-site-create example example.com http://example.com "Example Site"
       wp --url=http://example.com theme activate twentyfourteen
 
 Cookies are configured to be issued for only the site's domain. Cookies are shared between www.example.com and example.com.
@@ -123,6 +127,22 @@ will be processed.
       wp rewrite flush
 
 Take care with this as the values are processed by `eval` in Bash.
+
+## Sites
+
+Similar to `WP_COMMANDS`, `WP_SITES` but not executed as part of `wp-setup`.
+
+It can be used to define (multisite) sites. E.g.
+
+    WP_COMMANDS_PLUGINS: |
+      wp plugin install jetpack
+    WP_SITES_EXAMPLE: |
+      wp-site-create example example.com http://example.com "Example Site"
+      wp --url=http://example.com plugin activate jetpack
+
+The _installation_ of plugins and themes (etc) is appropriate for `WP_COMMANDS` and the _activation_ of them (etc) is appropriate for `WP_SITES`.
+
+
 
 [WP-CLI]: http://wp-cli.org
 [Bitbucket]: https://bitbucket.com
