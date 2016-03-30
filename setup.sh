@@ -99,8 +99,13 @@ function wp_site_create {
 	if [ ! $ID ]
 	then
 		ID=$(wp site create --slug=$SLUG --title="$TITLE" --porcelain)
-		wp db query "UPDATE wp_blogs SET domain = '$DOMAIN' WHERE blog_id = $ID"
 	fi
+	wp_site_domain $ID $DOMAIN $URL
+}
+
+function wp_site_domain {
+	local ID=$1 DOMAIN=$2 URL=$3
+	wp db query "UPDATE wp_blogs SET domain = '$DOMAIN' WHERE blog_id = $ID"
 	wp --url=$URL option update siteurl $URL
 	wp --url=$URL option update home $URL
 }
@@ -149,6 +154,10 @@ case "${0##*/}" in
 
 	wp-site-create)
 		wp_site_create "${@}"
+		;;
+
+	wp-site-domain)
+		wp_site_domain "${@}"
 		;;
 
 	*)
