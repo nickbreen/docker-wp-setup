@@ -40,7 +40,7 @@ function wp_core_config {
 	then
 		EXTRA_PHP=$(cat <<-EOF
 		if (isset(\$_SERVER['HTTP_HOST']))
-			define('COOKIE_DOMAIN', preg_replace('/^www/', '', \$_SERVER['HTTP_HOST']));
+		  define('COOKIE_DOMAIN', preg_replace('/^www/', '', \$_SERVER['HTTP_HOST']));
 		define('MULTISITE', true);
 		define('SUBDOMAIN_INSTALL', true);
 		define('DOMAIN_CURRENT_SITE', '${WP_URL##*//}');
