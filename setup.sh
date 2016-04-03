@@ -94,11 +94,11 @@ function wp_core_install {
 
 # setup a new site
 function wp_site_create {
-	local SLUG=$1 DOMAIN=$2 URL=$3 TITLE=$4 ID
-	ID=$(wp site list --field=blog_id --domain=$DOMAIN)
+	local SLUG=$1 DOMAIN=$2 URL=$3 TITLE=$4 ADMIN=$5 ID
+	ID=$(wp site list --field=blog_id "--domain=$DOMAIN")
 	if [ ! $ID ]
 	then
-		ID=$(wp site create --slug=$SLUG --title="$TITLE" --porcelain)
+		ID=$(wp site create ${SLUG:+--slug=$SLUG} "${TITLE:+--title=$TITLE}" "${ADMIN:+--email=$ADMIN}" --porcelain)
 	fi
 	wp_site_domain $ID $DOMAIN $URL
 }
@@ -106,8 +106,8 @@ function wp_site_create {
 function wp_site_domain {
 	local ID=$1 DOMAIN=$2 URL=$3
 	wp db query "UPDATE wp_blogs SET domain = '$DOMAIN' WHERE blog_id = $ID"
-	wp --url=$URL option update siteurl $URL
-	wp --url=$URL option update home $URL
+	wp --url=$DOMAIN option update siteurl $URL
+	wp --url=$DOMAIN option update home $URL
 }
 
 function wp_commands {
