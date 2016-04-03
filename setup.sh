@@ -98,14 +98,14 @@ function wp_site_create {
 	ID=$(wp site list --field=blog_id "--domain=$DOMAIN")
 	if [ ! $ID ]
 	then
-		ID=$(wp site create ${SLUG:+--slug=$SLUG} "${TITLE:+--title=$TITLE}" "${ADMIN:+--email=$ADMIN}" --porcelain)
+		ID=$(wp site create ${SLUG:+--slug=$SLUG} ${TITLE:+--title="$TITLE"} ${ADMIN:+--email="$ADMIN"} --porcelain)
 	fi
 	wp_site_domain $ID $DOMAIN $URL
 }
 
 function wp_site_domain {
 	local ID=$1 DOMAIN=$2 URL=$3
-	wp db query "UPDATE wp_blogs SET domain = '$DOMAIN' WHERE blog_id = $ID"
+	wp db query "UPDATE wp_blogs SET domain = '$DOMAIN' WHERE blog_id = $ID AND domain <> '$DOMAIN'"
 	wp --url=$DOMAIN option update siteurl $URL
 	wp --url=$DOMAIN option update home $URL
 }
@@ -116,6 +116,19 @@ function wp_commands {
 
 function wp_sites {
 	for V in ${!WP_SITES*}; do eval "${!V}"; done
+}
+
+function wp_safecss {
+	local GIST=$1 FILE=$2 GH_AUTH=$3
+	curl -sSf ${GH_AUTH:+-u $GH_AUTH} $GIST | jq -r ".files[\"$FILE\"].content" | (
+		ID=$(wp post list --post_type=safecss --field=ID)
+		if [ "$ID" ]
+		then
+			wp post update "$ID" - --post_title=safecss --post_type=safecss
+		else
+			wp post create - --post_title=safecss --post_type=safecss
+		fi
+	)
 }
 
 case "${0##*/}" in
@@ -158,6 +171,10 @@ case "${0##*/}" in
 
 	wp-site-domain)
 		wp_site_domain "${@}"
+		;;
+
+	wp-safecss)
+		wp_safecss "${@}"
 		;;
 
 	*)

@@ -9,14 +9,14 @@ services:
       MYSQL_PASSWORD: wordpress
 
   www:
-    image: nickbreen/wp-cli
+    image: nickbreen/wp-setup
     command: [ "/sbin/my_init", "--", "setuser", "wp", "bash", "-l", "-c", "while ! wp server --host=0.0.0.0 --docroot=/var/www; do sleep 5; done" ]
     volumes_from:
       - wp
     links:
       - db:mysql
     ports:
-      - 8080:8080
+      - 80:8080
     environment:
       CRON_D_WP: |
         PATH=/usr/local/bin:$$PATH
@@ -26,42 +26,43 @@ services:
     build: .
     image: nickbreen/wp-setup
     links:
-      - db:mysql
+      - db
     environment:
+      WP_DB_HOST: db
+      WP_DB_NAME: wordpress
+      WP_DB_USER: wordpress
+      WP_DB_PASSWORD: wordpress
+      WP_DB_ROOT_PASSWORD: example
+
       WP_LOCALE: en_NZ
       WP_VERSION: 4.4.2
       WP_TITLE: Main
       WP_SUBDOMAINS: "yes"
-      WP_URL: http://main.dev:8080
+      WP_URL: http://main.dev
       WP_ADMIN_USER: admin
       WP_ADMIN_PASSWORD: admin
       WP_ADMIN_EMAIL: admin@main.dev
       WP_EXTRA_PHP: |
         define('DISABLE_WP_CRON', TRUE);
       WP_COMMANDS_0: |
-        set -e
-
-        wp bitbucket theme install mwins/wordpress-theme-basic
-        wp github theme install wpbrasil/odin
-        wp github plugin install ericrallen/wp-base-plugin
-
-        wp plugin install jetpack --activate-network
-
-      WP_COMMANDS_END: |
         export TERM=dumb
+        wp plugin install jetpack --activate-network
         wp site list
         wp theme list
         wp plugin list
         wp --version
-      WP_SITES_1: |
+
+        wp-safecss https://api.github.com/gists/f006de1d42490a90a0ebaf4596d09102 file0.css $GH_AUTH
+
+      WP_SITES_0: |
         SLUG=site14
         DOMAIN=dev
-        HOST=$$SLUG.$$DOMAIN:8080
-        wp-site-create $$SLUG $$HOST https://$$HOST "Site 14"
+        HOST=$$SLUG.$$DOMAIN
+        wp-site-create $$SLUG $$HOST http://$$HOST "Site 14"
         wp --url=$$HOST theme activate twentyfourteen
-      WP_SITES_2: |
+
         SLUG=site15
         DOMAIN=dev
-        HOST=$$SLUG.$$DOMAIN:8080
-        wp-site-create $$SLUG $$HOST https://$$HOST "Site 15"
+        HOST=$$SLUG.$$DOMAIN
+        wp-site-create $$SLUG $$HOST http://$$HOST "Site 15"
         wp --url=$$HOST theme activate twentyfifteen
