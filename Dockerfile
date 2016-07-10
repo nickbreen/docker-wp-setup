@@ -38,5 +38,3 @@ RUN mkdir -p wp-content/uploads && \
   chmod -R g+w wp-content/uploads
 
 COPY wp-cli.yml /
-
-VOLUME /var/www /var/www/wp-content/uploads
