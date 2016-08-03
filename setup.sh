@@ -71,7 +71,8 @@ function wp_core_config {
 			--dbpass="${WP_DB_PASSWORD}" \
 			--dbhost="${WP_DB_HOST}:${WP_DB_PORT}" \
 			${WP_DB_PREFIX:+--dbprefix="$WP_DB_PREFIX"} \
-			--extra-php <<< "${WP_EXTRA_PHP}${EXTRA_PHP}"
+			${WP_SALTS:+--skip-salts} \
+			--extra-php <<< "${WP_SALTS}${WP_EXTRA_PHP}${EXTRA_PHP}"
 }
 
 function wp_core_install {

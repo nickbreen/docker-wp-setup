@@ -1,4 +1,4 @@
-FROM nickbreen/wp-cli:v1.1.0
+FROM nickbreen/wp-cli:v1.2.0
 
 MAINTAINER Nick Breen <nick@foobar.net.nz>
 
@@ -31,10 +31,5 @@ RUN for f in /usr/local/share/php/*.php; do php -l $f; done && bash -n /usr/loca
 RUN useradd -M -N -g www-data -d /var/www -s /bin/bash wp
 
 WORKDIR /var/www
-
-RUN mkdir -p wp-content/uploads && \
-  chown -R wp:www-data . && \
-  chmod -R g-w . && \
-  chmod -R g+w wp-content/uploads
 
 COPY wp-cli.yml /

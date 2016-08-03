@@ -10,17 +10,13 @@ services:
 
   www:
     image: nickbreen/wp-setup
-    command: [ "/sbin/my_init", "--", "setuser", "wp", "bash", "-l", "-c", "while ! wp server --host=0.0.0.0 --docroot=/var/www; do sleep 5; done" ]
+    command: /sbin/my_init -- setuser wp wp server --host=0.0.0.0 --docroot=/var/www
     volumes_from:
       - wp
     links:
       - db:mysql
     ports:
       - 80:8080
-    environment:
-      CRON_D_WP: |
-        PATH=/usr/local/bin:$$PATH
-        * * * * * wp wp cron event list --format=csv --fields=hook,next_run_relative | awk -F ',' '$$2 == "now" {print $$1}' | xargs -r -l1 wp cron event run
 
   wp:
     build: .
@@ -28,14 +24,19 @@ services:
     links:
       - db
     environment:
+      CRON_D_WP: |
+        PATH=/usr/local/bin:$$PATH
+        * * * * * wp sh /etc/container_environment/WP_CRON 2>&1 | logger --tag wp-cron
+        @reboot root setuser wp wp-setup 2>&1 | logger --tag wp-reboot
+      WP_CRON: |
+        wp cron event list --format=csv --fields=hook,next_run_relative | awk -F ',' '$$2 == "now" {print $$1}' | xargs -r -l1 wp cron event run
       WP_DB_HOST: db
       WP_DB_NAME: wordpress
       WP_DB_USER: wordpress
       WP_DB_PASSWORD: wordpress
       WP_DB_ROOT_PASSWORD: example
-
       WP_LOCALE: en_NZ
-      WP_VERSION: 4.4.2
+      WP_VERSION: 4.5.3
       WP_TITLE: Main
       WP_SUBDOMAINS: "yes"
       WP_URL: http://main.dev
