@@ -23,13 +23,12 @@ services:
     image: nickbreen/wp-setup
     links:
       - db
+    volumes:
+      - /var/www
     environment:
       CRON_D_WP: |
-        PATH=/usr/local/bin:$$PATH
-        * * * * * wp sh /etc/container_environment/WP_CRON 2>&1 | logger --tag wp-cron
-        @reboot root setuser wp wp-setup 2>&1 | logger --tag wp-reboot
-      WP_CRON: |
-        wp cron event list --format=csv --fields=hook,next_run_relative | awk -F ',' '$$2 == "now" {print $$1}' | xargs -r -l1 wp cron event run
+        * * * * * wp (/usr/local/bin/wp cron event run --due-now) 2>&1 | logger --tag wp-cron
+        @reboot root (sv start syslog-ng || exit 1; chown wp.www-data /var/www; chpst -u wp /usr/local/bin/wp-setup 2>&1 | logger --tag wp-reboot)
       WP_DB_HOST: db
       WP_DB_NAME: wordpress
       WP_DB_USER: wordpress
@@ -44,7 +43,9 @@ services:
       WP_ADMIN_PASSWORD: admin
       WP_ADMIN_EMAIL: admin@main.dev
       WP_EXTRA_PHP: |
+
         define('DISABLE_WP_CRON', TRUE);
+
       WP_COMMANDS_0: |
         export TERM=dumb
         wp plugin install jetpack --activate-network

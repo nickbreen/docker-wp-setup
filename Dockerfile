@@ -1,4 +1,4 @@
-FROM nickbreen/wp-cli:v1.2.0
+FROM nickbreen/wp-cli:v1.3.0
 
 MAINTAINER Nick Breen <nick@foobar.net.nz>
 
@@ -24,11 +24,9 @@ COPY php/* /usr/local/share/php/
 
 COPY setup.sh /usr/local/bin/wp-setup
 
-RUN cd /usr/local/bin/ && for L in wp-download wp-configure wp-install wp-db-setup wp-commands wp-sites wp-site-create wp-site-domain wp-safecss; do ln -s wp-setup $L; done
+RUN set - wp-download wp-configure wp-install wp-db-setup wp-commands wp-sites wp-site-create wp-site-domain wp-safecss; for L; do ln -s /usr/local/bin/wp-setup /usr/local/bin/$L; done
 
 RUN for f in /usr/local/share/php/*.php; do php -l $f; done && bash -n /usr/local/bin/wp-setup
-
-RUN useradd -M -N -g www-data -d /var/www -s /bin/bash wp
 
 WORKDIR /var/www
 

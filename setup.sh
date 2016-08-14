@@ -65,14 +65,18 @@ function wp_core_config {
 
 	# Configure the database
 	wp core config \
-			${WP_LOCALE:+--locale="$WP_LOCALE"} \
-			--dbname="${WP_DB_NAME}" \
-			--dbuser="${WP_DB_USER}" \
-			--dbpass="${WP_DB_PASSWORD}" \
-			--dbhost="${WP_DB_HOST}:${WP_DB_PORT}" \
-			${WP_DB_PREFIX:+--dbprefix="$WP_DB_PREFIX"} \
-			${WP_SALTS:+--skip-salts} \
-			--extra-php <<< "${WP_SALTS}${WP_EXTRA_PHP}${EXTRA_PHP}"
+		${WP_LOCALE:+--locale="$WP_LOCALE"} \
+		--dbname="${WP_DB_NAME}" \
+		--dbuser="${WP_DB_USER}" \
+		--dbpass="${WP_DB_PASSWORD}" \
+		--dbhost="${WP_DB_HOST}:${WP_DB_PORT}" \
+		${WP_DB_PREFIX:+--dbprefix="$WP_DB_PREFIX"} \
+		${WP_SALTS:+--skip-salts} \
+		--extra-php <<-EOF
+		${WP_SALTS}
+		${WP_EXTRA_PHP}
+		${EXTRA_PHP}
+		EOF
 }
 
 function wp_core_install {
@@ -84,13 +88,13 @@ function wp_core_install {
 
 	# Configure the Blog
 	wp core is-installed ${WP_SUBDOMAINS:+--network} || wp core ${WP_SUBDOMAINS:+multisite-}install \
-			--url="$WP_URL" \
-			${WP_SUBDOMAINS:+--subdomains} \
-			--title="$WP_TITLE" \
-			--admin_user="$WP_ADMIN_USER" \
-			--admin_password="$WP_ADMIN_PASSWORD" \
-			--admin_email="$WP_ADMIN_EMAIL" \
-			--skip-email
+		--url="$WP_URL" \
+		${WP_SUBDOMAINS:+--subdomains} \
+		--title="$WP_TITLE" \
+		--admin_user="$WP_ADMIN_USER" \
+		--admin_password="$WP_ADMIN_PASSWORD" \
+		--admin_email="$WP_ADMIN_EMAIL" \
+		--skip-email
 }
 
 # setup a new site
