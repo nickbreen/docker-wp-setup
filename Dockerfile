@@ -1,4 +1,4 @@
-FROM nickbreen/wp-cli:v1.3.0
+FROM nickbreen/wp-cli:v1.3.1
 
 MAINTAINER Nick Breen <nick@foobar.net.nz>
 
