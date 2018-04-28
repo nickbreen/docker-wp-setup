@@ -19,7 +19,7 @@ function wp_db_setup {
 
 	local V=$(shopt -qo xtrace && echo "-vvv")
 	# Setup the database if required.
-	local SQL="CREATE DATABASE IF NOT EXISTS $WP_DB_NAME; CREATE USER '$WP_DB_USER' IDENTIFIED BY '$WP_DB_PASSWORD'; GRANT ALL PRIVILEGES ON $WP_DB_NAME.* TO '$WP_DB_USER';	FLUSH PRIVILEGES; SHOW GRANTS FOR \"$WP_DB_USER\""
+	local SQL="CREATE DATABASE IF NOT EXISTS \`$WP_DB_NAME\`; GRANT ALL PRIVILEGES ON \`$WP_DB_NAME\`.* TO \`$WP_DB_USER\` IDENTIFIED BY '$WP_DB_PASSWORD';	FLUSH PRIVILEGES; SHOW GRANTS FOR \`$WP_DB_USER\`"
 	echo Waiting for the server at $WP_DB_HOST
 	while ! mysql $V -h$WP_DB_HOST -P$WP_DB_PORT -u$WP_DB_ROOT_USER -p$WP_DB_ROOT_PASSWORD -e "SELECT VERSION();"; do sleep 5; done
 	echo Checking the DB $WP_DB_NAME and USER $WP_DB_USER is available.
