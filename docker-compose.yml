@@ -1,70 +1,66 @@
-version: '2'
+version: '3.5'
+
+volumes:
+  www:
+
+networks:
+  wp: {}
+
 services:
   db:
-    image: mysql:5.5
+    image: mysql:5.6
+    networks:
+    - wp
     environment:
       MYSQL_ROOT_PASSWORD: example
       MYSQL_DATABASE: wordpress
       MYSQL_USER: wordpress
       MYSQL_PASSWORD: wordpress
 
+  memcache:
+    image: memcached
+    command: memcached -m 256 -vv
+    networks:
+    - wp
+
   www:
-    image: nickbreen/wp-setup
-    command: /sbin/my_init -- setuser wp wp server --host=0.0.0.0 --docroot=/var/www
-    volumes_from:
-      - wp
-    links:
-      - db:mysql
-    ports:
-      - 80:8080
+    image: nickbreen/wp-www:v3.0.0
+    depends_on:
+    - memcache
+    - php
+    volumes:
+    - www:/var/www:rw
+    - ./phpinfo.php:/var/www/phpinfo.php:ro
+    - ./default.conf:/etc/apache2/sites-available/000-default.conf:ro
+    networks:
+      wp:
+
+  php:
+    image: nickbreen/wp-php:v3.0.0
+    depends_on:
+    - memcache
+    - db
+    volumes:
+    - www:/var/www:rw
+    - ./phpinfo.php:/var/www/phpinfo.php:ro
+    - ./www.conf:/etc/php/7.0/fpm/pool.d/www.conf:ro
+    networks:
+      wp:
+        aliases:
+        - fastcgi
 
   wp:
-    build: .
-    image: nickbreen/wp-setup
-    links:
-      - db
+    depends_on:
+    - www
+    image: nickbreen/wp-cli:v3.0.0
+    command: /sbin/my_init -- /usr/local/bin/wp.sh
+    tmpfs:
+    - /tmp
     volumes:
-      - /var/www
-    environment:
-      CRON_D_WP: |
-        * * * * * wp (/usr/local/bin/wp cron event run --due-now) 2>&1 | logger --tag wp-cron
-        @reboot root (sv start syslog-ng || exit 1; chown wp.www-data /var/www; chpst -u wp /usr/local/bin/wp-setup 2>&1 | logger --tag wp-reboot)
-      WP_DB_HOST: db
-      WP_DB_NAME: wordpress
-      WP_DB_USER: wordpress
-      WP_DB_PASSWORD: wordpress
-      WP_DB_ROOT_PASSWORD: example
-      WP_LOCALE: en_NZ
-      WP_VERSION: 4.5.3
-      WP_TITLE: Main
-      WP_SUBDOMAINS: "yes"
-      WP_URL: http://main.dev
-      WP_ADMIN_USER: admin
-      WP_ADMIN_PASSWORD: admin
-      WP_ADMIN_EMAIL: admin@main.dev
-      WP_EXTRA_PHP: |
+    - www:/var/www:rw
+    - ./wp-cli.yml:/wp-cli.yml:ro
+    - ./wp.sh:/usr/local/bin/wp.sh:ro
+    networks:
+      wp:
+    
 
-        define('DISABLE_WP_CRON', TRUE);
-
-      WP_COMMANDS_0: |
-        export TERM=dumb
-        wp plugin install jetpack --activate-network
-        wp site list
-        wp theme list
-        wp plugin list
-        wp --version
-
-        wp-safecss https://api.github.com/gists/f006de1d42490a90a0ebaf4596d09102 file0.css $GH_AUTH
-
-      WP_SITES_0: |
-        SLUG=site14
-        DOMAIN=dev
-        HOST=$$SLUG.$$DOMAIN
-        wp-site-create $$SLUG $$HOST http://$$HOST "Site 14"
-        wp --url=$$HOST theme activate twentyfourteen
-
-        SLUG=site15
-        DOMAIN=dev
-        HOST=$$SLUG.$$DOMAIN
-        wp-site-create $$SLUG $$HOST http://$$HOST "Site 15"
-        wp --url=$$HOST theme activate twentyfifteen

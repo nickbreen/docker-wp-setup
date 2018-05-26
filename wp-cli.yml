@@ -1,3 +1,17 @@
-require:
-  - /usr/local/share/php/commands.php
 path: /var/www
+user: 1
+config create:
+  dbhost: db
+  dbname: wordpress
+  dbuser: wordpress
+  dbpass: wordpress
+  extra-php: |
+    define( 'WP_DEBUG', true );
+core install:
+  url: www.example.com
+  title: test
+  admin_user: admin
+  admin_password: admin
+  admin_email: admin@example.com
+  skip-email: true
+
